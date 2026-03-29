@@ -44,6 +44,21 @@ async function findById(userId, connection) {
   return rows[0] || null;
 }
 
+async function findByIdsForCompany(companyId, userIds, connection) {
+  if (!userIds.length) {
+    return [];
+  }
+
+  const placeholders = userIds.map(() => '?').join(', ');
+  return execute(
+    connection,
+    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active
+     FROM users
+     WHERE company_id = ? AND id IN (${placeholders})`,
+    [companyId, ...userIds]
+  );
+}
+
 async function updateLastLogin(userId, connection) {
   await execute(
     connection,
@@ -136,6 +151,7 @@ module.exports = {
   createUser,
   findByCompanyAndEmail,
   findById,
+  findByIdsForCompany,
   updateLastLogin,
   findByEmailGlobal,
   listUsers,

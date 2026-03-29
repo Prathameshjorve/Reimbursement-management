@@ -7,17 +7,53 @@ const userModel = require('../models/userModel');
 const ruleEngineService = require('./ruleEngineService');
 const currencyService = require('./currencyService');
 const auditService = require('./auditService');
+const {
+  CURRENCY_CODE_REGEX,
+  VALID_EXPENSE_CATEGORIES,
+  normalizeString,
+  normalizeUppercase,
+  isPositiveNumber,
+  isValidIsoDate
+} = require('../utils/validation');
 
 function roundCurrency(num) {
   return Math.round(Number(num) * 100) / 100;
 }
 
 async function createExpense(auth, payload, meta) {
-  const required = ['title', 'category', 'expenseDate', 'originalAmount', 'originalCurrency'];
-  for (const field of required) {
-    if (!payload[field]) {
-      throw new HttpError(400, `Missing required field: ${field}`);
-    }
+  const title = normalizeString(payload.title);
+  const description = normalizeString(payload.description);
+  const category = normalizeString(payload.category).toLowerCase();
+  const expenseDate = normalizeString(payload.expenseDate);
+  const originalCurrency = normalizeUppercase(payload.originalCurrency);
+  const originalAmount = Number(payload.originalAmount);
+
+  if (!title || !category || !expenseDate || payload.originalAmount === undefined || !originalCurrency) {
+    throw new HttpError(400, 'Title, category, date, amount, and currency are required');
+  }
+
+  if (title.length > 150) {
+    throw new HttpError(400, 'Expense title must be 150 characters or less');
+  }
+
+  if (description.length > 5000) {
+    throw new HttpError(400, 'Expense description is too long');
+  }
+
+  if (!VALID_EXPENSE_CATEGORIES.includes(category)) {
+    throw new HttpError(400, 'Please choose a valid expense category');
+  }
+
+  if (!isValidIsoDate(expenseDate)) {
+    throw new HttpError(400, 'Expense date must be in YYYY-MM-DD format');
+  }
+
+  if (!isPositiveNumber(originalAmount)) {
+    throw new HttpError(400, 'Expense amount must be greater than 0');
+  }
+
+  if (!CURRENCY_CODE_REGEX.test(originalCurrency)) {
+    throw new HttpError(400, 'Currency must be a valid 3-letter currency code');
   }
 
   return withTransaction(async (connection) => {
@@ -26,21 +62,20 @@ async function createExpense(auth, payload, meta) {
       throw new HttpError(404, 'Company not found');
     }
 
-    const workflow = await workflowModel.getApplicableWorkflow(auth.companyId, payload.category, connection);
+    const workflow = await workflowModel.getApplicableWorkflow(auth.companyId, category, connection);
     if (!workflow) {
       throw new HttpError(400, 'No active workflow configured for this category');
     }
 
-    const originalCurrency = String(payload.originalCurrency).toUpperCase();
     const { rate } = await currencyService.getExchangeRate(
       auth.companyId,
       originalCurrency,
       company.base_currency,
-      payload.expenseDate,
+      expenseDate,
       connection
     );
 
-    const convertedAmount = roundCurrency(Number(payload.originalAmount) * Number(rate));
+    const convertedAmount = roundCurrency(originalAmount * Number(rate));
     const steps = await workflowModel.getWorkflowSteps(workflow.id, auth.companyId, connection);
 
     const expenseId = await expenseModel.createExpense(
@@ -48,11 +83,11 @@ async function createExpense(auth, payload, meta) {
         companyId: auth.companyId,
         submittedByUserId: auth.userId,
         workflowId: workflow.id,
-        title: payload.title,
-        description: payload.description,
-        category: payload.category,
-        expenseDate: payload.expenseDate,
-        originalAmount: Number(payload.originalAmount),
+        title,
+        description: description || null,
+        category,
+        expenseDate,
+        originalAmount,
         originalCurrency,
         exchangeRate: Number(rate),
         convertedAmount,
@@ -82,7 +117,14 @@ async function createExpense(auth, payload, meta) {
         entityType: 'expense',
         entityId: expenseId,
         action: 'EXPENSE_SUBMITTED',
-        newValues: payload,
+        newValues: {
+          title,
+          description: description || null,
+          category,
+          expenseDate,
+          originalAmount,
+          originalCurrency
+        },
         metadata: { convertedAmount, exchangeRate: rate },
         ipAddress: meta.ipAddress,
         userAgent: meta.userAgent

@@ -6,6 +6,7 @@ const workflowModel = require('../models/workflowModel');
 const userModel = require('../models/userModel');
 const ruleEngineService = require('./ruleEngineService');
 const auditService = require('./auditService');
+const { normalizeString, isPositiveInteger } = require('../utils/validation');
 
 function groupBy(items, keyGetter) {
   const map = new Map();
@@ -63,10 +64,15 @@ function findActionStepId(context, userId, role) {
 
 async function actionApproval(auth, payload, meta) {
   const expenseId = Number(payload.expenseId);
-  const action = payload.action;
+  const action = normalizeString(payload.action).toLowerCase();
+  const comment = normalizeString(payload.comment);
 
-  if (!expenseId || !['approved', 'rejected'].includes(action)) {
+  if (!isPositiveInteger(expenseId) || !['approved', 'rejected'].includes(action)) {
     throw new HttpError(400, 'expenseId and valid action are required');
+  }
+
+  if (comment.length > 500) {
+    throw new HttpError(400, 'Approval comments must be 500 characters or less');
   }
 
   return withTransaction(async (connection) => {
@@ -97,7 +103,7 @@ async function actionApproval(auth, payload, meta) {
         workflowStepId,
         approverUserId: auth.userId,
         action,
-        comment: payload.comment || null
+        comment: comment || null
       },
       connection
     );
@@ -125,7 +131,7 @@ async function actionApproval(auth, payload, meta) {
         action: `EXPENSE_${action.toUpperCase()}`,
         oldValues: { status: stateBefore.status, currentStepOrder: stateBefore.currentStepOrder },
         newValues: { status: stateAfter.status, currentStepOrder: stateAfter.currentStepOrder },
-        metadata: { comment: payload.comment || null },
+        metadata: { comment: comment || null },
         ipAddress: meta.ipAddress,
         userAgent: meta.userAgent
       },

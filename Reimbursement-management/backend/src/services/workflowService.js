@@ -1,24 +1,87 @@
 const { withTransaction } = require('../config/db');
 const HttpError = require('../utils/httpError');
 const workflowModel = require('../models/workflowModel');
+const userModel = require('../models/userModel');
 const auditService = require('./auditService');
+const {
+  VALID_WORKFLOW_CATEGORIES,
+  VALID_APPROVAL_MODES,
+  VALID_STEP_TYPES,
+  normalizeString,
+  normalizeUppercase,
+  isPositiveInteger
+} = require('../utils/validation');
 
 function validateWorkflowInput(payload) {
-  if (!payload.name || !payload.approvalMode || !Array.isArray(payload.steps) || !payload.steps.length) {
+  const name = normalizeString(payload.name);
+  const approvalMode = normalizeUppercase(payload.approvalMode);
+  const appliesToCategory = normalizeString(payload.appliesToCategory || 'all').toLowerCase();
+  const steps = Array.isArray(payload.steps) ? payload.steps : [];
+
+  if (!name || !approvalMode || !steps.length) {
     throw new HttpError(400, 'name, approvalMode and at least one step are required');
   }
 
-  const invalidStep = payload.steps.find(
-    (step) =>
-      !step.name ||
-      !step.stepOrder ||
-      !step.stepType ||
-      !Array.isArray(step.approverUserIds) ||
-      !step.approverUserIds.length
-  );
+  if (name.length > 120) {
+    throw new HttpError(400, 'Workflow name must be 120 characters or less');
+  }
 
-  if (invalidStep) {
-    throw new HttpError(400, 'Each step requires name, stepOrder, stepType and approverUserIds');
+  if (!VALID_APPROVAL_MODES.includes(approvalMode)) {
+    throw new HttpError(400, 'Please choose a valid approval mode');
+  }
+
+  if (!VALID_WORKFLOW_CATEGORIES.includes(appliesToCategory)) {
+    throw new HttpError(400, 'Please choose a valid workflow category');
+  }
+
+  const seenOrders = new Set();
+
+  for (const step of steps) {
+    const stepName = normalizeString(step.name);
+    const stepType = normalizeUppercase(step.stepType);
+    const stepOrder = Number(step.stepOrder);
+    const approverIds = Array.isArray(step.approverUserIds)
+      ? step.approverUserIds.map((value) => Number(value))
+      : [];
+
+    if (!stepName || !isPositiveInteger(stepOrder) || !VALID_STEP_TYPES.includes(stepType) || !approverIds.length) {
+      throw new HttpError(400, 'Each step requires a valid name, order, type, and at least one approver');
+    }
+
+    if (stepName.length > 120) {
+      throw new HttpError(400, 'Workflow step names must be 120 characters or less');
+    }
+
+    if (seenOrders.has(stepOrder)) {
+      throw new HttpError(400, 'Each workflow step must have a unique order');
+    }
+    seenOrders.add(stepOrder);
+
+    if (approverIds.some((id) => !isPositiveInteger(id))) {
+      throw new HttpError(400, 'Approver IDs must be positive integers');
+    }
+
+    if (stepType === 'PERCENTAGE') {
+      const percent = Number(step.requiredApprovalPercent);
+      if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+        throw new HttpError(400, 'Percentage steps require requiredApprovalPercent between 0 and 100');
+      }
+    }
+  }
+
+  if ((approvalMode === 'PERCENTAGE' || approvalMode === 'HYBRID') && !Number.isFinite(Number(payload.requiredApprovalPercent))) {
+    throw new HttpError(400, 'This approval mode requires requiredApprovalPercent');
+  }
+
+  if (payload.requiredApprovalPercent !== undefined && payload.requiredApprovalPercent !== null) {
+    const percent = Number(payload.requiredApprovalPercent);
+    if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+      throw new HttpError(400, 'requiredApprovalPercent must be between 0 and 100');
+    }
+  }
+
+  if ((approvalMode === 'SPECIFIC_OVERRIDE' || approvalMode === 'HYBRID') && !isPositiveInteger(Number(payload.overrideApproverUserId))) {
+    throw new HttpError(400, 'This approval mode requires a valid overrideApproverUserId');
   }
 }
 
@@ -26,15 +89,29 @@ async function createWorkflow(auth, payload, meta) {
   validateWorkflowInput(payload);
 
   return withTransaction(async (connection) => {
+    const allApproverIds = [...new Set(
+      payload.steps
+        .flatMap((step) => step.approverUserIds || [])
+        .map((value) => Number(value))
+        .concat(payload.overrideApproverUserId ? [Number(payload.overrideApproverUserId)] : [])
+    )];
+
+    const users = await userModel.findByIdsForCompany(auth.companyId, allApproverIds, connection);
+    const activeUserIds = new Set(users.filter((user) => user.is_active).map((user) => user.id));
+
+    if (activeUserIds.size !== allApproverIds.length) {
+      throw new HttpError(400, 'One or more approvers were not found or are inactive');
+    }
+
     const workflowId = await workflowModel.createWorkflow(
       {
         companyId: auth.companyId,
-        name: payload.name,
-        description: payload.description,
-        appliesToCategory: payload.appliesToCategory || 'all',
-        approvalMode: payload.approvalMode,
+        name: normalizeString(payload.name),
+        description: normalizeString(payload.description) || null,
+        appliesToCategory: normalizeString(payload.appliesToCategory || 'all').toLowerCase(),
+        approvalMode: normalizeUppercase(payload.approvalMode),
         requiredApprovalPercent: payload.requiredApprovalPercent || null,
-        overrideApproverUserId: payload.overrideApproverUserId || null,
+        overrideApproverUserId: payload.overrideApproverUserId ? Number(payload.overrideApproverUserId) : null,
         isActive: payload.isActive !== false,
         version: 1,
         createdByUserId: auth.userId
@@ -47,16 +124,16 @@ async function createWorkflow(auth, payload, meta) {
         {
           companyId: auth.companyId,
           workflowId,
-          stepOrder: step.stepOrder,
-          name: step.name,
-          stepType: step.stepType,
+          stepOrder: Number(step.stepOrder),
+          name: normalizeString(step.name),
+          stepType: normalizeUppercase(step.stepType),
           requiredApprovalPercent: step.requiredApprovalPercent || null,
           isMandatory: step.isMandatory !== false
         },
         connection
       );
 
-      for (const approverUserId of step.approverUserIds) {
+      for (const approverUserId of [...new Set(step.approverUserIds.map((value) => Number(value)))]) {
         await workflowModel.addStepApprover(
           {
             companyId: auth.companyId,
