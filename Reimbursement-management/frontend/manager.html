@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
+    <title>Approvals — AIimburse</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="text-lg font-bold gradient-text">AIimburse</span>
+        </div>
+        <div class="space-y-1 mb-6">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Main</p>
+            <a href="dashboard.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>Dashboard</a>
+            <a href="employee.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>My Expenses</a>
+            <a href="manager.html" class="sidebar-link active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Approvals</a>
+            <a href="admin.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Admin Panel</a>
+        </div>
+        <div class="space-y-1">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Settings</p>
+            <a href="#" class="sidebar-link" onclick="toggleTheme(); return false;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>Toggle Theme</a>
+            <a href="index.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Logout</a>
+        </div>
+        <div class="mt-auto pt-6">
+            <div class="glass-card-static p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">SK</div>
+                <div class="min-w-0"><p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Sarah Kim</p><p class="text-xs truncate" style="color: var(--text-muted);">Manager</p></div>
+            </div>
+        </div>
+    </nav>
+
+    <button id="mobile-menu-btn" class="fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl lg:hidden" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" style="color: var(--text-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div>
+                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Approval Queue</h1>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Review and approve expense submissions from your team</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                    <span class="text-sm font-bold text-yellow-400">5 Pending</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 stagger-children">
+            <div class="glass-card p-5 text-center">
+                <p class="text-3xl font-bold text-yellow-400">5</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Awaiting Review</p>
+            </div>
+            <div class="glass-card p-5 text-center">
+                <p class="text-3xl font-bold text-green-400">12</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Approved This Month</p>
+            </div>
+            <div class="glass-card p-5 text-center">
+                <p class="text-3xl font-bold text-red-400">2</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Rejected</p>
+            </div>
+            <div class="glass-card p-5 text-center">
+                <p class="text-3xl font-bold text-indigo-400">&#8377;2.4L</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Total Approved</p>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        <h3 class="text-lg font-bold mb-4" style="color: var(--text-primary);">Pending Approvals</h3>
+        <div class="space-y-4 mb-10 stagger-children">
+            <!-- Approval Card 1 -->
+            <div class="glass-card p-6" id="approval-1">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-5">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold flex-shrink-0">JD</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">John Doe</p>
+                                <span class="badge badge-pending">Pending</span>
+                            </div>
+                            <p class="text-xs" style="color: var(--text-secondary);">Team Lunch - Olive Garden</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 25, 2026 - Food and Dining</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-indigo-400">&#8377;4,200</p>
+                            <p class="text-xs" style="color: var(--text-muted);">$50.60 original</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="approveExpense('approval-1')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>
+                            <button onclick="rejectExpense('approval-1')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>
+                            <button onclick="toggleComment('comment-1')" class="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all" title="Add Comment">
+                                <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Comment Section -->
+                <div id="comment-1" class="hidden mt-4 pt-4 border-t" style="border-color: var(--glass-border);">
+                    <div class="flex gap-3">
+                        <input type="text" class="input-glass flex-1 text-sm" placeholder="Add a comment...">
+                        <button class="btn-gradient px-4 py-2 text-sm">Send</button>
+                    </div>
+                </div>
+                <!-- Approval Stepper -->
+                <div class="mt-4 pt-4 border-t" style="border-color: var(--glass-border);">
+                    <div class="stepper">
+                        <div class="stepper-step"><div class="stepper-circle completed"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div><p class="stepper-label">Submitted</p></div>
+                        <div class="stepper-line completed"></div>
+                        <div class="stepper-step"><div class="stepper-circle active"><span>2</span></div><p class="stepper-label">Manager</p></div>
+                        <div class="stepper-line"></div>
+                        <div class="stepper-step"><div class="stepper-circle pending"><span>3</span></div><p class="stepper-label">Finance</p></div>
+                        <div class="stepper-line"></div>
+                        <div class="stepper-step"><div class="stepper-circle pending"><span>4</span></div><p class="stepper-label">Done</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Card 2 -->
+            <div class="glass-card p-6" id="approval-2">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-5">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold flex-shrink-0">AP</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Alice Park</p>
+                                <span class="badge badge-pending">Pending</span>
+                            </div>
+                            <p class="text-xs" style="color: var(--text-secondary);">Conference Registration - React Summit</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 24, 2026 - Travel</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-indigo-400">&#8377;45,000</p>
+                            <p class="text-xs" style="color: var(--text-muted);">$542.17 original</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="approveExpense('approval-2')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>
+                            <button onclick="rejectExpense('approval-2')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>
+                            <button onclick="toggleComment('comment-2')" class="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                                <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="comment-2" class="hidden mt-4 pt-4 border-t" style="border-color: var(--glass-border);">
+                    <div class="flex gap-3"><input type="text" class="input-glass flex-1 text-sm" placeholder="Add a comment..."><button class="btn-gradient px-4 py-2 text-sm">Send</button></div>
+                </div>
+                <div class="mt-4 pt-4 border-t" style="border-color: var(--glass-border);">
+                    <div class="stepper">
+                        <div class="stepper-step"><div class="stepper-circle completed"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div><p class="stepper-label">Submitted</p></div>
+                        <div class="stepper-line completed"></div>
+                        <div class="stepper-step"><div class="stepper-circle active"><span>2</span></div><p class="stepper-label">Manager</p></div>
+                        <div class="stepper-line"></div>
+                        <div class="stepper-step"><div class="stepper-circle pending"><span>3</span></div><p class="stepper-label">Finance</p></div>
+                        <div class="stepper-line"></div>
+                        <div class="stepper-step"><div class="stepper-circle pending"><span>4</span></div><p class="stepper-label">Director</p></div>
+                        <div class="stepper-line"></div>
+                        <div class="stepper-step"><div class="stepper-circle pending"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><p class="stepper-label">Done</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Card 3 -->
+            <div class="glass-card p-6" id="approval-3">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-5">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold flex-shrink-0">RK</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Raj Kumar</p>
+                                <span class="badge badge-pending">Pending</span>
+                            </div>
+                            <p class="text-xs" style="color: var(--text-secondary);">Client Dinner - The Grand Hotel</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 26, 2026 - Food and Dining</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right">
+                            <p class="text-xl font-bold text-indigo-400">&#8377;8,500</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="approveExpense('approval-3')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>
+                            <button onclick="rejectExpense('approval-3')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>
+                            <button onclick="toggleComment('comment-3')" class="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                                <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="comment-3" class="hidden mt-4 pt-4 border-t" style="border-color: var(--glass-border);">
+                    <div class="flex gap-3"><input type="text" class="input-glass flex-1 text-sm" placeholder="Add a comment..."><button class="btn-gradient px-4 py-2 text-sm">Send</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Tracking -->
+        <h3 class="text-lg font-bold mb-4" style="color: var(--text-primary);">Approval Timeline</h3>
+        <div class="glass-card-static p-6 mb-8">
+            <div class="space-y-0">
+                <div class="timeline-item">
+                    <div class="timeline-dot completed"></div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">Raj Kumar submitted expense</p>
+                        <span class="badge badge-info text-xs">&#8377;8,500</span>
+                    </div>
+                    <p class="text-xs" style="color: var(--text-muted);">Mar 26, 2026 at 10:15 AM</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot completed"></div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">Alice Park submitted expense</p>
+                        <span class="badge badge-info text-xs">&#8377;45,000</span>
+                    </div>
+                    <p class="text-xs" style="color: var(--text-muted);">Mar 24, 2026 at 3:30 PM</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot completed"></div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-sm font-medium text-green-400">You approved Mike Chen's expense</p>
+                        <span class="badge badge-approved text-xs">&#8377;6,200</span>
+                    </div>
+                    <p class="text-xs" style="color: var(--text-muted);">Mar 23, 2026 at 11:00 AM</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="text-sm font-medium text-red-400">You rejected Lisa Wang's expense</p>
+                        <span class="badge badge-rejected text-xs">&#8377;15,000</span>
+                    </div>
+                    <p class="text-xs" style="color: var(--text-muted);">Mar 22, 2026 at 2:15 PM</p>
+                    <p class="text-xs mt-1 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 inline-block">Missing receipt attachment</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Processed -->
+        <h3 class="text-lg font-bold mb-4" style="color: var(--text-primary);">Recently Processed</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
+            <div class="glass-card p-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">MC</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold" style="color: var(--text-primary);">Mike Chen - Software License</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 23, 2026</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-green-400">&#8377;6,200</p>
+                        <span class="badge badge-approved text-xs">Approved</span>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">LW</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold" style="color: var(--text-primary);">Lisa Wang - Hotel Booking</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 22, 2026</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-red-400">&#8377;15,000</p>
+                        <span class="badge badge-rejected text-xs">Rejected</span>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">JD</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold" style="color: var(--text-primary);">John Doe - Flight Booking</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 20, 2026</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-green-400">&#8377;18,500</p>
+                        <span class="badge badge-approved text-xs">Approved</span>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">RK</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold" style="color: var(--text-primary);">Raj Kumar - Office Supplies</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 19, 2026</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-green-400">&#8377;2,300</p>
+                        <span class="badge badge-approved text-xs">Approved</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="./script.js"></script>
+</body>
+</html>

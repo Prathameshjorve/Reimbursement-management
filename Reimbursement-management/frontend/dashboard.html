@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
+    <title>Dashboard — AIimburse</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="text-lg font-bold gradient-text">AIimburse</span>
+        </div>
+
+        <div class="space-y-1 mb-6">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Main</p>
+            <a href="dashboard.html" class="sidebar-link active">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="employee.html" class="sidebar-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                My Expenses
+            </a>
+            <a href="manager.html" class="sidebar-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Approvals
+            </a>
+            <a href="admin.html" class="sidebar-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Admin Panel
+            </a>
+        </div>
+
+        <div class="space-y-1">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Settings</p>
+            <a href="#" class="sidebar-link" onclick="toggleTheme(); return false;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                Toggle Theme
+            </a>
+            <a href="index.html" class="sidebar-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Logout
+            </a>
+        </div>
+
+        <!-- User Card -->
+        <div class="mt-auto pt-6">
+            <div class="glass-card-static p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">JD</div>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold truncate" style="color: var(--text-primary);">John Doe</p>
+                    <p class="text-xs truncate" style="color: var(--text-muted);">Admin • TechCorp</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-btn" class="fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl lg:hidden" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" style="color: var(--text-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div>
+                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Dashboard Overview</h1>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Welcome back, John. Here's your expense summary.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="relative p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                    <svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span class="notification-dot"></span>
+                </button>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                    <span class="text-xs font-medium" style="color: var(--text-muted);">Currency:</span>
+                    <span class="text-sm font-bold text-indigo-400" id="dash-currency">INR (₹)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8 stagger-children">
+            <!-- Total Expenses -->
+            <div class="glass-card stat-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="badge badge-info">+12.5%</span>
+                </div>
+                <p class="text-2xl font-bold" style="color: var(--text-primary);">₹4,52,800</p>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Total Expenses</p>
+                <div class="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width: 72%;"></div>
+                </div>
+            </div>
+
+            <!-- Pending -->
+            <div class="glass-card stat-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="badge badge-pending">8 items</span>
+                </div>
+                <p class="text-2xl font-bold" style="color: var(--text-primary);">₹1,24,500</p>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Pending Approval</p>
+                <div class="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-yellow-500 to-orange-500" style="width: 35%;"></div>
+                </div>
+            </div>
+
+            <!-- Approved -->
+            <div class="glass-card stat-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="badge badge-approved">+8.3%</span>
+                </div>
+                <p class="text-2xl font-bold" style="color: var(--text-primary);">₹3,12,400</p>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Approved Amount</p>
+                <div class="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-500" style="width: 85%;"></div>
+                </div>
+            </div>
+
+            <!-- Rejected -->
+            <div class="glass-card stat-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="badge badge-rejected">3 items</span>
+                </div>
+                <p class="text-2xl font-bold" style="color: var(--text-primary);">₹15,900</p>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Rejected</p>
+                <div class="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-red-500 to-pink-500" style="width: 12%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+            <!-- Expense Chart Area -->
+            <div class="xl:col-span-2 glass-card-static p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold" style="color: var(--text-primary);">Expense Analytics</h3>
+                        <p class="text-sm" style="color: var(--text-secondary);">Monthly expense breakdown</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">Monthly</button>
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Weekly</button>
+                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Yearly</button>
+                    </div>
+                </div>
+                <!-- Chart Bars -->
+                <div class="flex items-end gap-3 h-48 px-2">
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 60%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Jan</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 80%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Feb</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 45%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Mar</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 90%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Apr</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 70%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">May</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 55%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Jun</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 85%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Jul</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 65%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Aug</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 75%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Sep</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 50%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Oct</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-600 to-violet-500 transition-all duration-500 hover:opacity-80" style="height: 95%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Nov</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo-500/40 to-violet-400/40 border-2 border-dashed border-indigo-500/30 transition-all duration-500" style="height: 40%;"></div>
+                        <span class="text-xs" style="color: var(--text-muted);">Dec</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="glass-card-static p-6">
+                <h3 class="text-lg font-bold mb-1" style="color: var(--text-primary);">By Category</h3>
+                <p class="text-sm mb-6" style="color: var(--text-secondary);">Expense distribution</p>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-1.5">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">🍽️ Food & Dining</span>
+                            <span class="text-sm font-bold text-indigo-400">₹89,200</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width: 35%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1.5">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">✈️ Travel</span>
+                            <span class="text-sm font-bold text-violet-400">₹1,45,000</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500" style="width: 55%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1.5">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">🏨 Accommodation</span>
+                            <span class="text-sm font-bold text-purple-400">₹1,12,600</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style="width: 45%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1.5">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">🚗 Transportation</span>
+                            <span class="text-sm font-bold text-pink-400">₹56,000</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-pink-500 to-rose-500" style="width: 25%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1.5">
+                            <span class="text-sm font-medium" style="color: var(--text-primary);">📦 Supplies</span>
+                            <span class="text-sm font-bold text-cyan-400">₹50,000</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                            <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Approval Flow -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <!-- Recent Expenses -->
+            <div class="glass-card-static p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold" style="color: var(--text-primary);">Recent Expenses</h3>
+                    <a href="employee.html" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">View All →</a>
+                </div>
+                <div class="space-y-3 stagger-children">
+                    <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Team Lunch - Olive Garden</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 25, 2026 • Food & Dining</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-sm font-bold" style="color: var(--text-primary);">₹4,200</p>
+                            <span class="badge badge-pending text-xs">Pending</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center text-lg flex-shrink-0">✈️</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Flight to Mumbai - Business</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 22, 2026 • Travel</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-sm font-bold" style="color: var(--text-primary);">₹18,500</p>
+                            <span class="badge badge-approved text-xs">Approved</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center text-lg flex-shrink-0">🚗</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Uber Rides - March Week 3</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 20, 2026 • Transportation</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-sm font-bold" style="color: var(--text-primary);">₹2,800</p>
+                            <span class="badge badge-approved text-xs">Approved</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-lg flex-shrink-0">🏨</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Hotel Stay - Marriott Mumbai</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Mar 18, 2026 • Accommodation</p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-sm font-bold" style="color: var(--text-primary);">₹12,000</p>
+                            <span class="badge badge-rejected text-xs">Rejected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Workflow -->
+            <div class="glass-card-static p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold" style="color: var(--text-primary);">Approval Pipeline</h3>
+                    <a href="manager.html" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Manage →</a>
+                </div>
+
+                <!-- Workflow Illustration -->
+                <div class="mb-6 rounded-xl overflow-hidden" style="background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05));">
+                    <img src="https://mgx-backend-cdn.metadl.com/generate/images/1069169/2026-03-28/383d08d2-b134-4a15-9736-3e3521998fe2.png" alt="Workflow" class="w-full h-32 object-cover opacity-60">
+                </div>
+
+                <!-- Stepper -->
+                <div class="stepper mb-6">
+                    <div class="stepper-step">
+                        <div class="stepper-circle completed">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="stepper-label">Submitted</p>
+                    </div>
+                    <div class="stepper-line completed"></div>
+                    <div class="stepper-step">
+                        <div class="stepper-circle completed">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="stepper-label">Manager</p>
+                    </div>
+                    <div class="stepper-line"></div>
+                    <div class="stepper-step">
+                        <div class="stepper-circle active">
+                            <span>3</span>
+                        </div>
+                        <p class="stepper-label">Finance</p>
+                    </div>
+                    <div class="stepper-line"></div>
+                    <div class="stepper-step">
+                        <div class="stepper-circle pending">
+                            <span>4</span>
+                        </div>
+                        <p class="stepper-label">Director</p>
+                    </div>
+                    <div class="stepper-line"></div>
+                    <div class="stepper-step">
+                        <div class="stepper-circle pending">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="stepper-label">Done</p>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="space-y-0">
+                    <div class="timeline-item">
+                        <div class="timeline-dot completed"></div>
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">Submitted by John Doe</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 25, 2026 at 9:30 AM</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot completed"></div>
+                        <p class="text-sm font-medium" style="color: var(--text-primary);">Approved by Sarah Kim (Manager)</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Mar 25, 2026 at 12:45 PM</p>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <p class="text-sm font-medium" style="color: var(--text-secondary);">Awaiting Finance Review</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Assigned to Mike Chen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Currency Banner -->
+        <div class="mt-8 glass-card-static p-6 flex flex-col md:flex-row items-center gap-6" style="background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.04));">
+            <img src="https://mgx-backend-cdn.metadl.com/generate/images/1069169/2026-03-28/ae68845c-1f82-47de-b685-a6aec19e30ab.png" alt="Currency" class="w-24 h-24 object-contain animate-float">
+            <div class="flex-1 text-center md:text-left">
+                <h3 class="text-lg font-bold mb-1" style="color: var(--text-primary);">Multi-Currency Support Active</h3>
+                <p class="text-sm" style="color: var(--text-secondary);">All expenses are automatically converted to your company currency (INR). Real-time exchange rates powered by ExchangeRate API.</p>
+            </div>
+            <div class="currency-converted text-center">
+                <p class="text-xs" style="color: var(--text-muted);">Sample Conversion</p>
+                <p class="text-lg font-bold text-indigo-400">$50 → ₹4,150</p>
+                <p class="text-xs" style="color: var(--text-muted);">Rate: 1 USD = 83.00 INR</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="./script.js"></script>
+</body>
+</html>

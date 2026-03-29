@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
+    <title>Admin Panel — ExpenseAI</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="flex items-center gap-3 mb-8 px-2">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <span class="text-lg font-bold gradient-text">ExpenseAI</span>
+        </div>
+        <div class="space-y-1 mb-6">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Main</p>
+            <a href="dashboard.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>Dashboard</a>
+            <a href="employee.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>My Expenses</a>
+            <a href="manager.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Approvals</a>
+            <a href="admin.html" class="sidebar-link active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Admin Panel</a>
+        </div>
+        <div class="space-y-1">
+            <p class="text-xs font-semibold uppercase tracking-wider px-3 mb-3" style="color: var(--text-muted);">Settings</p>
+            <a href="#" class="sidebar-link" onclick="toggleTheme(); return false;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>Toggle Theme</a>
+            <a href="index.html" class="sidebar-link"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Logout</a>
+        </div>
+        <div class="mt-auto pt-6">
+            <div class="glass-card-static p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">AD</div>
+                <div class="min-w-0"><p class="text-sm font-semibold truncate" style="color: var(--text-primary);">Admin User</p><p class="text-xs truncate" style="color: var(--text-muted);">Admin</p></div>
+            </div>
+        </div>
+    </nav>
+
+    <button id="mobile-menu-btn" class="fixed top-4 left-4 z-50 p-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl lg:hidden" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" style="color: var(--text-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div>
+                <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Admin Panel</h1>
+                <p class="text-sm mt-1" style="color: var(--text-secondary);">Manage users, roles, and approval rules</p>
+            </div>
+            <button onclick="openUserModal()" class="btn-gradient flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add User
+            </button>
+        </div>
+
+        <!-- Admin Tabs -->
+        <div class="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mb-8 w-fit">
+            <button id="admin-tab-users" onclick="switchAdminTab('users')" class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg">Users</button>
+            <button id="admin-tab-expenses" onclick="switchAdminTab('expenses')" class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:bg-white/5" style="color: var(--text-muted);">All Expenses</button>
+            <button id="admin-tab-rules" onclick="switchAdminTab('rules')" class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:bg-white/5" style="color: var(--text-muted);">Rule Builder</button>
+        </div>
+
+        <!-- Users Section -->
+        <div id="section-users">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
+                <!-- User Card 1 -->
+                <div class="glass-card p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold">JD</div>
+                            <div>
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">John Doe</p>
+                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7a101512143a0e1f19121915080a54191517">[email&#160;protected]</a></p>
+                            </div>
+                        </div>
+                        <span class="badge badge-info">Employee</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Reports to:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Total Claims:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">&#8377;87,500</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Pending:</span>
+                            <span class="text-yellow-400 font-medium">3</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
+                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
+                    </div>
+                </div>
+
+                <!-- User Card 2 -->
+                <div class="glass-card p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">SK</div>
+                            <div>
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Sarah Kim</p>
+                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b6c5d7c4d7def6c2d3d5ded5d9c4c698d5d9db">[email&#160;protected]</a></p>
+                            </div>
+                        </div>
+                        <span class="badge badge-approved">Manager</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Reports to:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Mike Chen (Director)</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Team Size:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">5 members</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Pending Reviews:</span>
+                            <span class="text-yellow-400 font-medium">5</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
+                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
+                    </div>
+                </div>
+
+                <!-- User Card 3 -->
+                <div class="glass-card p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold">AP</div>
+                            <div>
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Alice Park</p>
+                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0c6d60656f694c78696f646f637e7c226f6361">[email&#160;protected]</a></p>
+                            </div>
+                        </div>
+                        <span class="badge badge-info">Employee</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Reports to:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Total Claims:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">&#8377;1,23,000</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Pending:</span>
+                            <span class="text-yellow-400 font-medium">1</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
+                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
+                    </div>
+                </div>
+
+                <!-- User Card 4 -->
+                <div class="glass-card p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">MC</div>
+                            <div>
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Mike Chen</p>
+                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="593430323c192d3c3a313a362b29773a3634">[email&#160;protected]</a></p>
+                            </div>
+                        </div>
+                        <span class="badge badge-pending">Finance</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Role:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Finance Director</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Approval Level:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Level 3</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Pending Reviews:</span>
+                            <span class="text-yellow-400 font-medium">2</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
+                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
+                    </div>
+                </div>
+
+                <!-- User Card 5 -->
+                <div class="glass-card p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold">RK</div>
+                            <div>
+                                <p class="text-sm font-bold" style="color: var(--text-primary);">Raj Kumar</p>
+                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="addfccc7edd9c8cec5cec2dfdd83cec2c0">[email&#160;protected]</a></p>
+                            </div>
+                        </div>
+                        <span class="badge badge-info">Employee</span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Reports to:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Total Claims:</span>
+                            <span style="color: var(--text-primary);" class="font-medium">&#8377;45,800</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span style="color: var(--text-muted);">Pending:</span>
+                            <span class="text-yellow-400 font-medium">1</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
+                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Expenses Section -->
+        <div id="section-expenses" class="hidden">
+            <div class="flex flex-wrap items-center gap-3 mb-6">
+                <div class="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+                    <button class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-500/20 text-indigo-400">All</button>
+                    <button class="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Pending</button>
+                    <button class="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Approved</button>
+                    <button class="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Rejected</button>
+                </div>
+            </div>
+            <div class="space-y-3 stagger-children">
+                <div class="glass-card p-5 flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">JD</div>
+                        <div class="min-w-0"><p class="text-sm font-semibold" style="color: var(--text-primary);">John Doe - Team Lunch</p><p class="text-xs" style="color: var(--text-muted);">Mar 25, 2026 - Food</p></div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-lg font-bold text-indigo-400">&#8377;4,200</span>
+                        <span class="badge badge-pending">Pending</span>
+                        <button class="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold hover:bg-indigo-500/30 transition-all border border-indigo-500/20">Override</button>
+                    </div>
+                </div>
+                <div class="glass-card p-5 flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">AP</div>
+                        <div class="min-w-0"><p class="text-sm font-semibold" style="color: var(--text-primary);">Alice Park - React Summit</p><p class="text-xs" style="color: var(--text-muted);">Mar 24, 2026 - Travel</p></div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-lg font-bold text-indigo-400">&#8377;45,000</span>
+                        <span class="badge badge-pending">Pending</span>
+                        <button class="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold hover:bg-indigo-500/30 transition-all border border-indigo-500/20">Override</button>
+                    </div>
+                </div>
+                <div class="glass-card p-5 flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">MC</div>
+                        <div class="min-w-0"><p class="text-sm font-semibold" style="color: var(--text-primary);">Mike Chen - Software License</p><p class="text-xs" style="color: var(--text-muted);">Mar 23, 2026 - Supplies</p></div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-lg font-bold text-green-400">&#8377;6,200</span>
+                        <span class="badge badge-approved">Approved</span>
+                        <button class="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold hover:bg-indigo-500/30 transition-all border border-indigo-500/20">Override</button>
+                    </div>
+                </div>
+                <div class="glass-card p-5 flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">LW</div>
+                        <div class="min-w-0"><p class="text-sm font-semibold" style="color: var(--text-primary);">Lisa Wang - Hotel Booking</p><p class="text-xs" style="color: var(--text-muted);">Mar 22, 2026 - Accommodation</p></div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-lg font-bold text-red-400">&#8377;15,000</span>
+                        <span class="badge badge-rejected">Rejected</span>
+                        <button class="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 text-xs font-semibold hover:bg-indigo-500/30 transition-all border border-indigo-500/20">Override</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rule Builder Section -->
+        <div id="section-rules" class="hidden">
+            <div class="glass-card-static p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold" style="color: var(--text-primary);">Conditional Approval Rules</h3>
+                        <p class="text-sm" style="color: var(--text-secondary);">Define smart rules for automatic approval routing</p>
+                    </div>
+                    <button onclick="addNewRule()" class="btn-gradient flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Add Rule
+                    </button>
+                </div>
+
+                <!-- Rule 1 -->
+                <div class="mb-6 p-5 rounded-xl border" style="border-color: var(--glass-border); background: var(--glass-bg);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-bold">1</span>
+                            <span class="text-sm font-bold" style="color: var(--text-primary);">High Value Travel Rule</span>
+                        </div>
+                        <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="rule-block">
+                            <span class="text-xs font-bold text-indigo-400 uppercase">IF</span>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 140px;">
+                                <option>Amount</option>
+                                <option>Category</option>
+                                <option>Department</option>
+                            </select>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 100px;">
+                                <option>greater than</option>
+                                <option>less than</option>
+                                <option>equals</option>
+                            </select>
+                            <input type="number" class="input-glass py-1.5 px-3 text-sm" style="max-width: 120px;" value="5000">
+                        </div>
+                        <div class="rule-connector">
+                            <span>AND</span>
+                        </div>
+                        <div class="rule-block">
+                            <span class="text-xs font-bold text-indigo-400 uppercase">IF</span>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 140px;">
+                                <option>Category</option>
+                                <option>Amount</option>
+                                <option>Department</option>
+                            </select>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 100px;">
+                                <option>equals</option>
+                                <option>not equals</option>
+                            </select>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 140px;">
+                                <option>Travel</option>
+                                <option>Food</option>
+                                <option>Accommodation</option>
+                                <option>Supplies</option>
+                            </select>
+                        </div>
+                        <div class="rule-connector">
+                            <span>THEN</span>
+                        </div>
+                        <div class="rule-block" style="border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.05);">
+                            <span class="text-xs font-bold text-green-400 uppercase">REQUIRE</span>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-400 text-xs font-semibold border border-indigo-500/20">Manager</span>
+                                <span class="px-3 py-1 rounded-full bg-violet-500/15 text-violet-400 text-xs font-semibold border border-violet-500/20">Finance</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rule 2 -->
+                <div class="mb-6 p-5 rounded-xl border" style="border-color: var(--glass-border); background: var(--glass-bg);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-bold">2</span>
+                            <span class="text-sm font-bold" style="color: var(--text-primary);">Executive Override Rule</span>
+                        </div>
+                        <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="rule-block">
+                            <span class="text-xs font-bold text-indigo-400 uppercase">IF</span>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 140px;">
+                                <option>Amount</option>
+                            </select>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 100px;">
+                                <option>greater than</option>
+                            </select>
+                            <input type="number" class="input-glass py-1.5 px-3 text-sm" style="max-width: 120px;" value="50000">
+                        </div>
+                        <div class="rule-connector">
+                            <span>THEN</span>
+                        </div>
+                        <div class="rule-block" style="border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.05);">
+                            <span class="text-xs font-bold text-green-400 uppercase">REQUIRE</span>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 text-xs font-semibold border border-amber-500/20">60% Approvals</span>
+                                <span class="text-xs font-bold" style="color: var(--text-muted);">OR</span>
+                                <span class="px-3 py-1 rounded-full bg-red-500/15 text-red-400 text-xs font-semibold border border-red-500/20">CFO Approval</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rule 3 -->
+                <div class="p-5 rounded-xl border" style="border-color: var(--glass-border); background: var(--glass-bg);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-bold">3</span>
+                            <span class="text-sm font-bold" style="color: var(--text-primary);">Auto-Approve Small Expenses</span>
+                        </div>
+                        <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="rule-block">
+                            <span class="text-xs font-bold text-indigo-400 uppercase">IF</span>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 140px;"><option>Amount</option></select>
+                            <select class="input-glass py-1.5 px-3 text-sm w-auto" style="max-width: 100px;"><option>less than</option></select>
+                            <input type="number" class="input-glass py-1.5 px-3 text-sm" style="max-width: 120px;" value="500">
+                        </div>
+                        <div class="rule-connector"><span>THEN</span></div>
+                        <div class="rule-block" style="border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.05);">
+                            <span class="text-xs font-bold text-green-400 uppercase">ACTION</span>
+                            <span class="px-3 py-1 rounded-full bg-green-500/15 text-green-400 text-xs font-semibold border border-green-500/20">Auto-Approve</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add User Modal -->
+    <div id="user-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="flex items-center justify-between mb-6">
+                <div><h2 class="text-xl font-bold" style="color: var(--text-primary);">Add New User</h2><p class="text-sm" style="color: var(--text-secondary);">Create a new team member</p></div>
+                <button onclick="closeUserModal()" class="p-2 rounded-xl hover:bg-white/10 transition-all"><svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="space-y-4 mb-6">
+                <div class="float-label-group"><input type="text" class="input-glass" placeholder=" "><label>Full Name</label></div>
+                <div class="float-label-group"><input type="email" class="input-glass" placeholder=" "><label>Email Address</label></div>
+                <div class="float-label-group">
+                    <select class="input-glass">
+                        <option value="employee">Employee</option>
+                        <option value="manager">Manager</option>
+                        <option value="finance">Finance</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <label>Role</label>
+                </div>
+                <div class="float-label-group">
+                    <select class="input-glass">
+                        <option value="">Select Manager</option>
+                        <option value="sarah">Sarah Kim</option>
+                        <option value="mike">Mike Chen</option>
+                    </select>
+                    <label>Reports To</label>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeUserModal()" class="btn-ghost flex-1">Cancel</button>
+                <button onclick="closeUserModal()" class="btn-gradient flex-1">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
+    <title>AIimburse — Smart Reimbursement</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/lucide-static@latest/font/lucide.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen flex">
+    <!-- Left Panel - Branding -->
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 30%, #4c1d95 60%, #1e1b4b 100%);">
+        <!-- Decorative elements -->
+        <div class="absolute inset-0">
+            <div class="absolute top-20 left-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 right-20 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute top-1/2 left-1/3 w-64 h-64 bg-purple-500/5 rounded-full blur-2xl"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col justify-between p-12 w-full">
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <span class="text-white text-xl font-bold tracking-tight">AIimburse</span>
+            </div>
+
+            <!-- Center Content -->
+            <div class="flex-1 flex flex-col items-center justify-center text-center px-8">
+                <img src="https://mgx-backend-cdn.metadl.com/generate/images/1069169/2026-03-28/217d3ac4-51ac-4f5d-abeb-3b197501577f.png" alt="AI OCR" class="w-64 h-64 object-contain animate-float mb-8 drop-shadow-2xl">
+                <h1 class="text-4xl font-bold text-white mb-4 leading-tight">Smart AI-Powered<br>Reimbursements</h1>
+                <p class="text-indigo-200/70 text-lg max-w-md">Automate expense tracking with AI-powered OCR, multi-currency support, and intelligent approval workflows.</p>
+
+                <!-- Feature Pills -->
+                <div class="flex flex-wrap gap-3 mt-8 justify-center">
+                    <span class="px-4 py-2 rounded-full bg-white/10 text-white/80 text-sm font-medium backdrop-blur-sm border border-white/10">🤖 AI OCR</span>
+                    <span class="px-4 py-2 rounded-full bg-white/10 text-white/80 text-sm font-medium backdrop-blur-sm border border-white/10">🌍 Multi-Currency</span>
+                    <span class="px-4 py-2 rounded-full bg-white/10 text-white/80 text-sm font-medium backdrop-blur-sm border border-white/10">⚡ Smart Approvals</span>
+                </div>
+            </div>
+
+            <!-- Testimonial -->
+            <div class="glass-card-static p-6 bg-white/5">
+                <p class="text-indigo-100/80 text-sm italic mb-3">"ExpenseAI reduced our reimbursement processing time by 80%. The AI-powered OCR is a game changer."</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold">SK</div>
+                    <div>
+                        <p class="text-white text-sm font-semibold">Sarah Kim</p>
+                        <p class="text-indigo-300/60 text-xs">CFO, TechVentures Inc.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Auth Form -->
+    <div class="flex-1 flex items-center justify-center p-6 lg:p-12" style="background: var(--gradient-bg);">
+        <div class="w-full max-w-md">
+            <!-- Mobile Logo -->
+            <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <span class="text-xl font-bold gradient-text">AIimburse</span>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mb-8">
+                <button id="tab-login" onclick="switchTab('login')" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg">Login</button>
+                <button id="tab-signup" onclick="switchTab('signup')" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 text-gray-400 hover:text-white">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="form-login" class="space-y-5">
+                <div>
+                    <h2 class="text-2xl font-bold mb-1" style="color: var(--text-primary);">Welcome back</h2>
+                    <p class="text-sm" style="color: var(--text-secondary);">Enter your credentials to access your account</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="float-label-group">
+                        <input type="email" id="login-email" class="input-glass" placeholder=" " required>
+                        <label>Email address</label>
+                    </div>
+                    <div class="float-label-group">
+                        <input type="password" id="login-password" class="input-glass" placeholder=" " required>
+                        <label>Password</label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-transparent accent-indigo-500">
+                        <span class="text-sm" style="color: var(--text-secondary);">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">Forgot password?</a>
+                </div>
+
+                <button onclick="handleLogin()" class="btn-gradient w-full py-3 text-base">
+                    Sign In
+                </button>
+
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t" style="border-color: var(--glass-border);"></div></div>
+                    <div class="relative flex justify-center text-sm"><span class="px-4" style="background: var(--bg-primary); color: var(--text-muted);">or continue with</span></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="btn-ghost flex items-center justify-center gap-2 py-2.5">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Google
+                    </button>
+                    <button class="btn-ghost flex items-center justify-center gap-2 py-2.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+                        Apple
+                    </button>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="form-signup" class="space-y-5 hidden">
+                <div>
+                    <h2 class="text-2xl font-bold mb-1" style="color: var(--text-primary);">Create your account</h2>
+                    <p class="text-sm" style="color: var(--text-secondary);">Set up your company and start managing expenses</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="float-label-group">
+                        <input type="text" id="signup-company" class="input-glass" placeholder=" " required>
+                        <label>Company Name</label>
+                    </div>
+
+                    <div class="float-label-group">
+                        <select id="signup-country" class="input-glass" onchange="onCountryChange()" required>
+                            <option value="">Select Country</option>
+                        </select>
+                        <label>Country</label>
+                    </div>
+
+                    <div id="currency-display" class="hidden currency-converted flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span style="color: var(--text-secondary);">Company Currency: </span>
+                        <span id="detected-currency" class="font-semibold text-indigo-400"></span>
+                    </div>
+
+                    <div class="float-label-group">
+                        <input type="email" id="signup-email" class="input-glass" placeholder=" " required>
+                        <label>Work Email</label>
+                    </div>
+
+                    <div class="float-label-group">
+                        <input type="password" id="signup-password" class="input-glass" placeholder=" " required>
+                        <label>Password</label>
+                    </div>
+
+                    <!-- Password Strength -->
+                    <div class="space-y-2">
+                        <div class="flex gap-1">
+                            <div id="str-1" class="h-1 flex-1 rounded-full bg-white/10 transition-all duration-300"></div>
+                            <div id="str-2" class="h-1 flex-1 rounded-full bg-white/10 transition-all duration-300"></div>
+                            <div id="str-3" class="h-1 flex-1 rounded-full bg-white/10 transition-all duration-300"></div>
+                            <div id="str-4" class="h-1 flex-1 rounded-full bg-white/10 transition-all duration-300"></div>
+                        </div>
+                        <p id="str-text" class="text-xs" style="color: var(--text-muted);">Password strength</p>
+                    </div>
+                </div>
+
+                <label class="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-transparent accent-indigo-500 mt-0.5">
+                    <span class="text-sm" style="color: var(--text-secondary);">I agree to the <a href="#" class="text-indigo-400 hover:text-indigo-300">Terms of Service</a> and <a href="#" class="text-indigo-400 hover:text-indigo-300">Privacy Policy</a></span>
+                </label>
+
+                <button onclick="handleSignup()" class="btn-gradient w-full py-3 text-base">
+                    Create Account & Company
+                </button>
+            </div>
+
+            <!-- Dark Mode Toggle -->
+            <div class="flex items-center justify-center gap-3 mt-8">
+                <svg class="w-4 h-4" style="color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <div id="theme-toggle" class="toggle-switch" onclick="toggleTheme()"></div>
+                <svg class="w-4 h-4" style="color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
