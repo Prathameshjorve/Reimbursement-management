@@ -11,6 +11,47 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 var API_BASE = localStorage.getItem('expenseai-api-base') || 'http://localhost:5000/api';
+var VALID_EXPENSE_CATEGORIES = ['travel', 'food', 'accommodation', 'transport', 'supplies', 'other'];
+
+function normalizeValue(value) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeEmail(value) {
+    return normalizeValue(value).toLowerCase();
+}
+
+function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidCompanyCode(value) {
+    return /^[A-Z0-9]{2,20}$/.test(value);
+}
+
+function isValidDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    var date = new Date(value + 'T00:00:00');
+    return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isFutureDate(value) {
+    var selected = new Date(value + 'T00:00:00');
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selected.getTime() > today.getTime();
+}
+
+function ensureRoleAccess(page, role) {
+    var roleByPage = {
+        'admin.html': 'admin',
+        'manager.html': 'manager',
+        'employee.html': 'employee'
+    };
+
+    if (!roleByPage[page]) return true;
+    return role === roleByPage[page] || role === 'admin';
+}
 
 function getAuthToken() {
     return localStorage.getItem('expenseai-token');
@@ -65,10 +106,20 @@ function apiFetch(path, options) {
         method: opts.method || 'GET',
         headers: headers,
         body: opts.body ? JSON.stringify(opts.body) : undefined
+    }).catch(function () {
+        throw new Error('Unable to reach the server. Please check your connection and try again.');
     }).then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (data) {
+        var contentType = res.headers.get('content-type') || '';
+        var parser = contentType.indexOf('application/json') !== -1
+            ? res.json().catch(function () { return {}; })
+            : Promise.resolve({});
+
+        return parser.then(function (data) {
             if (!res.ok) {
                 var message = data.message || 'Request failed';
+                if (res.status === 401) {
+                    clearSession();
+                }
                 throw new Error(message);
             }
             return data;
@@ -94,6 +145,14 @@ function bootstrapPage() {
     if (page !== 'index.html') {
         if (!getAuthToken() || !user) {
             window.location.href = 'index.html';
+            return;
+        }
+
+        if (!ensureRoleAccess(page, user.role)) {
+            showToast('You do not have access to that page', 'error');
+            setTimeout(function () {
+                redirectByRole(user.role);
+            }, 500);
             return;
         }
     }
@@ -171,10 +230,29 @@ function switchTab(tab) {
 function handleLogin() {
     const email = document.getElementById('login-email');
     const password = document.getElementById('login-password');
-    if (email && password && email.value && password.value) {
-        var companyCode = localStorage.getItem('expenseai-company-code') || window.prompt('Enter your company code');
+    if (email && password) {
+        var normalizedEmail = normalizeEmail(email.value);
+        var rawPassword = password.value || '';
+        var companyCode = normalizeValue(localStorage.getItem('expenseai-company-code') || window.prompt('Enter your company code'));
+
+        if (!normalizedEmail || !rawPassword) {
+            showToast('Please enter both email and password', 'error');
+            return;
+        }
+
+        if (!isValidEmail(normalizedEmail)) {
+            showToast('Please enter a valid email address', 'error');
+            return;
+        }
+
         if (!companyCode) {
             showToast('Company code is required', 'error');
+            return;
+        }
+
+        companyCode = companyCode.toUpperCase();
+        if (!isValidCompanyCode(companyCode)) {
+            showToast('Company code must use only letters and numbers', 'error');
             return;
         }
 
@@ -182,9 +260,9 @@ function handleLogin() {
         apiFetch('/auth/login', {
             method: 'POST',
             body: {
-                companyCode: String(companyCode).toUpperCase(),
-                email: email.value.trim(),
-                password: password.value
+                companyCode: companyCode,
+                email: normalizedEmail,
+                password: rawPassword
             }
         })
             .then(function (data) {
@@ -207,11 +285,36 @@ function handleSignup() {
     const country = document.getElementById('signup-country');
     const email = document.getElementById('signup-email');
     const password = document.getElementById('signup-password');
-    if (company && country && email && password && company.value && country.value && email.value && password.value) {
-        var nameParts = email.value.split('@')[0].split(/[._-]/);
+    if (company && country && email && password) {
+        var companyName = normalizeValue(company.value);
+        var countryName = normalizeValue(country.value);
+        var normalizedEmail = normalizeEmail(email.value);
+        var rawPassword = password.value || '';
+
+        if (!companyName || !countryName || !normalizedEmail || !rawPassword) {
+            showToast('Please fill in all fields', 'error');
+            return;
+        }
+
+        if (companyName.length < 2) {
+            showToast('Company name should be at least 2 characters', 'error');
+            return;
+        }
+
+        if (!isValidEmail(normalizedEmail)) {
+            showToast('Please enter a valid work email address', 'error');
+            return;
+        }
+
+        if (rawPassword.length < 8) {
+            showToast('Password must be at least 8 characters long', 'error');
+            return;
+        }
+
+        var nameParts = normalizedEmail.split('@')[0].split(/[._-]/);
         var firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'User';
         var lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Admin';
-        var companyCode = company.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10) || 'COMPANY1';
+        var companyCode = companyName.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10) || 'COMPANY1';
         var detectedCurrency = 'USD';
         const currency = document.getElementById('detected-currency');
         if (currency && currency.textContent) {
@@ -223,19 +326,19 @@ function handleSignup() {
             method: 'POST',
             body: {
                 companyCode: companyCode,
-                companyName: company.value.trim(),
+                companyName: companyName,
                 baseCurrency: detectedCurrency,
-                countryCode: country.value.slice(0, 2).toUpperCase(),
+                countryCode: countryName.slice(0, 2).toUpperCase(),
                 firstName: firstName,
                 lastName: lastName,
-                email: email.value.trim(),
-                password: password.value,
+                email: normalizedEmail,
+                password: rawPassword,
                 role: 'admin'
             }
         })
             .then(function (data) {
                 saveSession(data);
-                localStorage.setItem('expenseai-company', company.value);
+                localStorage.setItem('expenseai-company', companyName);
                 showToast('Account created. Company code: ' + companyCode, 'success');
                 setTimeout(function () {
                     redirectByRole(data.user.role);
@@ -561,15 +664,57 @@ function submitExpense() {
     var currencyInput = document.getElementById('expense-currency');
     var descriptionInput = document.getElementById('expense-desc');
 
+    var title = normalizeValue(titleInput ? titleInput.value : '');
+    var category = normalizeValue(categoryInput ? categoryInput.value : '').toLowerCase();
+    var expenseDate = normalizeValue(dateInput ? dateInput.value : '');
+    var amount = Number(amountInput ? amountInput.value : 0);
+    var currency = normalizeValue(currencyInput ? currencyInput.value : '').toUpperCase();
+    var description = normalizeValue(descriptionInput ? descriptionInput.value : '');
+
+    if (!title) {
+        showToast('Please enter a vendor or expense title', 'error');
+        return;
+    }
+
+    if (title.length > 150) {
+        showToast('Expense title is too long', 'error');
+        return;
+    }
+
+    if (VALID_EXPENSE_CATEGORIES.indexOf(category) === -1) {
+        showToast('Please choose a valid expense category', 'error');
+        return;
+    }
+
+    if (!isValidDate(expenseDate)) {
+        showToast('Please choose a valid expense date', 'error');
+        return;
+    }
+
+    if (isFutureDate(expenseDate)) {
+        showToast('Expense date cannot be in the future', 'error');
+        return;
+    }
+
+    if (!isFinite(amount) || amount <= 0) {
+        showToast('Expense amount must be greater than 0', 'error');
+        return;
+    }
+
+    if (!/^[A-Z]{3}$/.test(currency)) {
+        showToast('Please choose a valid currency', 'error');
+        return;
+    }
+
     apiFetch('/expenses', {
         method: 'POST',
         body: {
-            title: titleInput ? titleInput.value : 'Expense',
-            description: descriptionInput ? descriptionInput.value : '',
-            category: categoryInput ? categoryInput.value : 'other',
-            expenseDate: dateInput ? dateInput.value : new Date().toISOString().slice(0, 10),
-            originalAmount: amountInput ? Number(amountInput.value || 0) : 0,
-            originalCurrency: currencyInput ? currencyInput.value : 'USD'
+            title: title,
+            description: description,
+            category: category,
+            expenseDate: expenseDate,
+            originalAmount: amount,
+            originalCurrency: currency
         }
     })
         .then(function () {
@@ -587,6 +732,11 @@ function submitExpense() {
 // ==========================================
 
 function approveExpense(id) {
+    if (!id || !isFinite(Number(id))) {
+        showToast('Invalid expense selected for approval', 'error');
+        return;
+    }
+
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
@@ -604,13 +754,23 @@ function approveExpense(id) {
 }
 
 function rejectExpense(id) {
+    if (!id || !isFinite(Number(id))) {
+        showToast('Invalid expense selected for rejection', 'error');
+        return;
+    }
+
     var reason = window.prompt('Add rejection comment (optional):') || '';
+    if (normalizeValue(reason).length > 500) {
+        showToast('Rejection comment must be 500 characters or less', 'error');
+        return;
+    }
+
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
             expenseId: Number(id),
             action: 'rejected',
-            comment: reason
+            comment: normalizeValue(reason)
         }
     })
         .then(function () {
@@ -668,11 +828,23 @@ function closeUserModal() {
 
 function addNewRule() {
     var name = window.prompt('Workflow name');
+    name = normalizeValue(name);
     if (!name) return;
+
+    if (name.length > 120) {
+        showToast('Workflow name is too long', 'error');
+        return;
+    }
 
     var approverId = window.prompt('Approver user ID for step 1 (manager/admin user id)');
     if (!approverId) {
         showToast('Approver user ID is required', 'error');
+        return;
+    }
+
+    approverId = Number(approverId);
+    if (!isFinite(approverId) || approverId <= 0 || Math.floor(approverId) !== approverId) {
+        showToast('Approver user ID must be a positive whole number', 'error');
         return;
     }
 
@@ -687,7 +859,7 @@ function addNewRule() {
                     stepOrder: 1,
                     name: 'Manager Approval',
                     stepType: 'ANY_OF',
-                    approverUserIds: [Number(approverId)]
+                    approverUserIds: [approverId]
                 }
             ]
         }
