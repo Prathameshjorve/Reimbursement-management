@@ -12,6 +12,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
 var API_BASE = localStorage.getItem('expenseai-api-base') || 'http://localhost:5000/api';
 
+var ROLE_HOME = {
+    admin: 'admin.html',
+    manager: 'manager.html',
+    employee: 'employee.html',
+    finance: 'finance.html',
+    director: 'director.html'
+};
+
+var ROLE_ALLOWED_PAGES = {
+    admin: ['admin.html', 'employee.html', 'manager.html', 'dashboard.html'],
+    manager: ['manager.html', 'employee.html', 'dashboard.html'],
+    employee: ['employee.html', 'dashboard.html'],
+    finance: ['finance.html', 'dashboard.html'],
+    director: ['director.html', 'dashboard.html']
+};
+
 function getAuthToken() {
     return localStorage.getItem('expenseai-token');
 }
@@ -37,18 +53,33 @@ function saveSession(payload) {
 function clearSession() {
     localStorage.removeItem('expenseai-token');
     localStorage.removeItem('expenseai-user');
+    localStorage.removeItem('expenseai-company-code');
 }
 
 function redirectByRole(role) {
-    if (role === 'admin') {
-        window.location.href = 'admin.html';
-        return;
-    }
-    if (role === 'manager') {
-        window.location.href = 'manager.html';
-        return;
-    }
-    window.location.href = 'employee.html';
+    var destination = ROLE_HOME[String(role || '').toLowerCase()] || 'employee.html';
+    window.location.href = destination;
+}
+
+function isPageAllowedForRole(page, role) {
+    var normalizedRole = String(role || '').toLowerCase();
+    var allowed = ROLE_ALLOWED_PAGES[normalizedRole] || [];
+    return page === 'index.html' || allowed.indexOf(page) !== -1;
+}
+
+function applyRoleNavigationVisibility(role) {
+    var normalizedRole = String(role || '').toLowerCase();
+    var links = document.querySelectorAll('.sidebar-link[href]');
+    links.forEach(function (link) {
+        var href = link.getAttribute('href') || '';
+        if (href === '#' || href === 'index.html') {
+            return;
+        }
+
+        if (!isPageAllowedForRole(href, normalizedRole)) {
+            link.classList.add('hidden');
+        }
+    });
 }
 
 function apiFetch(path, options) {
@@ -96,6 +127,13 @@ function bootstrapPage() {
             window.location.href = 'index.html';
             return;
         }
+
+        if (!isPageAllowedForRole(page, user.role)) {
+            redirectByRole(user.role);
+            return;
+        }
+
+        applyRoleNavigationVisibility(user.role);
     }
 
     if (page === 'employee.html') {
@@ -106,6 +144,12 @@ function bootstrapPage() {
     }
     if (page === 'admin.html') {
         loadWorkflows();
+    }
+    if (page === 'finance.html') {
+        loadFinanceApprovals();
+    }
+    if (page === 'director.html') {
+        loadDirectorExpenses();
     }
 }
 
@@ -171,18 +215,15 @@ function switchTab(tab) {
 function handleLogin() {
     const email = document.getElementById('login-email');
     const password = document.getElementById('login-password');
+    const companyCodeInput = document.getElementById('login-company-code');
     if (email && password && email.value && password.value) {
-        var companyCode = localStorage.getItem('expenseai-company-code') || window.prompt('Enter your company code');
-        if (!companyCode) {
-            showToast('Company code is required', 'error');
-            return;
-        }
+        var companyCode = (companyCodeInput && companyCodeInput.value ? companyCodeInput.value : localStorage.getItem('expenseai-company-code') || '').trim();
 
         showToast('Signing in...', 'info');
         apiFetch('/auth/login', {
             method: 'POST',
             body: {
-                companyCode: String(companyCode).toUpperCase(),
+                companyCode: companyCode ? String(companyCode).toUpperCase() : undefined,
                 email: email.value.trim(),
                 password: password.value
             }
@@ -235,6 +276,10 @@ function handleSignup() {
         })
             .then(function (data) {
                 saveSession(data);
+                var loginCompanyCodeInput = document.getElementById('login-company-code');
+                if (loginCompanyCodeInput) {
+                    loginCompanyCodeInput.value = companyCode;
+                }
                 localStorage.setItem('expenseai-company', company.value);
                 showToast('Account created. Company code: ' + companyCode, 'success');
                 setTimeout(function () {
@@ -410,49 +455,129 @@ function processFile(file) {
         var placeholder = document.getElementById('upload-placeholder');
         var preview = document.getElementById('upload-preview');
         var img = document.getElementById('receipt-preview');
+        var dateInput = document.getElementById('expense-date');
         if (placeholder) placeholder.classList.add('hidden');
         if (preview) preview.classList.remove('hidden');
         if (img) img.src = e.target.result;
 
-        // Simulate OCR
-        simulateOCR();
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().slice(0, 10);
+        }
+
+        extractReceiptWithOCR(e.target.result);
     };
     reader.readAsDataURL(file);
 }
 
-function simulateOCR() {
+function parseAmount(text) {
+    var amountMatch = text.match(/(?:total|amount|grand total|net amount)[^\d]{0,15}(\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/i);
+    if (amountMatch && amountMatch[1]) {
+        return Number(String(amountMatch[1]).replace(/[,\s]/g, ''));
+    }
+
+    var anyAmount = text.match(/(\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})|\d{3,}(?:\.\d{1,2})?)/);
+    if (anyAmount && anyAmount[1]) {
+        return Number(String(anyAmount[1]).replace(/[,\s]/g, ''));
+    }
+
+    return null;
+}
+
+function parseDate(text) {
+    var dateMatch = text.match(/(\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/);
+    if (!dateMatch) {
+        return null;
+    }
+
+    var value = dateMatch[1];
+    if (/^\d{4}/.test(value)) {
+        return value.replace(/\//g, '-');
+    }
+
+    var parts = value.split(/[\/-]/);
+    var day = parts[0].padStart(2, '0');
+    var month = parts[1].padStart(2, '0');
+    var year = parts[2].length === 2 ? ('20' + parts[2]) : parts[2];
+    return year + '-' + month + '-' + day;
+}
+
+function parseVendor(text) {
+    var lines = text
+        .split(/\r?\n/)
+        .map(function (line) { return line.trim(); })
+        .filter(Boolean);
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (/invoice|receipt|total|amount|tax|date/i.test(line)) {
+            continue;
+        }
+        if (line.length >= 3 && /[A-Za-z]/.test(line)) {
+            return line.slice(0, 60);
+        }
+    }
+    return null;
+}
+
+function ensureTesseract() {
+    if (window.Tesseract) {
+        return Promise.resolve(window.Tesseract);
+    }
+
+    return new Promise(function (resolve, reject) {
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        script.onload = function () { resolve(window.Tesseract); };
+        script.onerror = function () { reject(new Error('Failed to load OCR engine')); };
+        document.head.appendChild(script);
+    });
+}
+
+function extractReceiptWithOCR(imageDataUrl) {
     var ocr = document.getElementById('ocr-result');
     if (!ocr) return;
 
     ocr.classList.remove('hidden');
 
-    // Simulate scanning delay
-    setTimeout(function () {
-        var vendors = ['Starbucks', 'Uber', 'Marriott Hotel', 'Delta Airlines', 'Amazon', 'Restaurant XYZ'];
-        var categories = ['Food', 'Transportation', 'Accommodation', 'Travel', 'Supplies', 'Food'];
-        var amounts = [560, 1200, 8500, 15000, 3200, 780];
-        var idx = Math.floor(Math.random() * vendors.length);
+    var amountEl = document.getElementById('ocr-amount');
+    var vendorEl = document.getElementById('ocr-vendor');
+    var dateEl = document.getElementById('ocr-date');
+    var categoryEl = document.getElementById('ocr-category');
+    if (amountEl) amountEl.textContent = 'Scanning...';
+    if (vendorEl) vendorEl.textContent = 'Scanning...';
+    if (dateEl) dateEl.textContent = 'Scanning...';
+    if (categoryEl) categoryEl.textContent = 'Auto';
 
-        var amountEl = document.getElementById('ocr-amount');
-        var vendorEl = document.getElementById('ocr-vendor');
-        var dateEl = document.getElementById('ocr-date');
-        var categoryEl = document.getElementById('ocr-category');
+    ensureTesseract()
+        .then(function (Tesseract) {
+            return Tesseract.recognize(imageDataUrl, 'eng');
+        })
+        .then(function (result) {
+            var text = (result.data && result.data.text) ? result.data.text : '';
+            var amount = parseAmount(text);
+            var vendor = parseVendor(text);
+            var date = parseDate(text) || new Date().toISOString().slice(0, 10);
 
-        if (amountEl) amountEl.textContent = '\u20B9' + amounts[idx].toLocaleString('en-IN');
-        if (vendorEl) vendorEl.textContent = vendors[idx];
-        if (dateEl) dateEl.textContent = '2026-03-27';
-        if (categoryEl) categoryEl.textContent = categories[idx];
+            var amountInput = document.getElementById('expense-amount');
+            var vendorInput = document.getElementById('expense-vendor');
+            var dateInput = document.getElementById('expense-date');
 
-        // Auto-fill form
-        var amountInput = document.getElementById('expense-amount');
-        var vendorInput = document.getElementById('expense-vendor');
-        var dateInput = document.getElementById('expense-date');
-        if (amountInput) amountInput.value = amounts[idx];
-        if (vendorInput) vendorInput.value = vendors[idx];
-        if (dateInput) dateInput.value = '2026-03-27';
+            if (amountEl) amountEl.textContent = amount ? amount.toFixed(2) : 'Not found';
+            if (vendorEl) vendorEl.textContent = vendor || 'Not found';
+            if (dateEl) dateEl.textContent = date;
 
-        showToast('AI detected: \u20B9' + amounts[idx].toLocaleString('en-IN') + ' at ' + vendors[idx], 'success');
-    }, 1500);
+            if (amountInput && amount) amountInput.value = amount;
+            if (vendorInput && vendor) vendorInput.value = vendor;
+            if (dateInput) dateInput.value = date;
+
+            showToast('OCR scan completed', 'success');
+        })
+        .catch(function () {
+            showToast('OCR failed. Fill fields manually.', 'error');
+            if (amountEl) amountEl.textContent = 'Not found';
+            if (vendorEl) vendorEl.textContent = 'Not found';
+            if (dateEl) dateEl.textContent = new Date().toISOString().slice(0, 10);
+        });
 }
 
 // ==========================================
@@ -587,10 +712,16 @@ function submitExpense() {
 // ==========================================
 
 function approveExpense(id) {
+    var expenseId = Number(String(id).replace(/[^0-9]/g, ''));
+    if (!expenseId) {
+        showToast('Invalid expense id', 'error');
+        return;
+    }
+
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
-            expenseId: Number(id),
+            expenseId: expenseId,
             action: 'approved'
         }
     })
@@ -604,11 +735,17 @@ function approveExpense(id) {
 }
 
 function rejectExpense(id) {
+    var expenseId = Number(String(id).replace(/[^0-9]/g, ''));
+    if (!expenseId) {
+        showToast('Invalid expense id', 'error');
+        return;
+    }
+
     var reason = window.prompt('Add rejection comment (optional):') || '';
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
-            expenseId: Number(id),
+            expenseId: expenseId,
             action: 'rejected',
             comment: reason
         }
@@ -824,4 +961,63 @@ function showToast(message, type) {
         toast.style.opacity = '0';
         setTimeout(function () { toast.remove(); }, 300);
     }, 3000);
+}
+
+function loadFinanceApprovals() {
+    var container = document.getElementById('finance-approvals-list');
+    if (!container) return;
+
+    apiFetch('/approvals/pending')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-5"><p style="color: var(--text-secondary);">No finance reviews pending.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (row) {
+                return '<div class="glass-card p-5 mb-3">' +
+                    '<div class="flex items-center justify-between gap-4">' +
+                    '<div><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.title + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + ' | ' + row.category + '</p></div>' +
+                    '<div class="text-right"><p class="text-lg font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Step ' + (row.currentStepOrder || '-') + '</p></div>' +
+                    '</div>' +
+                    '<div class="mt-4 flex gap-2">' +
+                    '<button onclick="approveExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>' +
+                    '<button onclick="rejectExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>' +
+                    '</div></div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function loadDirectorExpenses() {
+    var container = document.getElementById('director-expenses-list');
+    if (!container) return;
+
+    apiFetch('/expenses')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-5"><p style="color: var(--text-secondary);">No expenses available.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (row) {
+                return '<div class="glass-card p-5 mb-3">' +
+                    '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">' +
+                    '<div><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.title + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + ' | ' + row.category + ' | ' + row.status + '</p></div>' +
+                    '<div class="text-right"><p class="text-lg font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p></div>' +
+                    '</div>' +
+                    '<div class="mt-4 flex gap-2">' +
+                    '<button onclick="approveExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Override Approve</button>' +
+                    '<button onclick="rejectExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Override Reject</button>' +
+                    '</div></div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
