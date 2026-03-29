@@ -6,7 +6,108 @@ document.addEventListener('DOMContentLoaded', function () {
     initTheme();
     loadCountries();
     initPasswordStrength();
+    initSession();
+    bootstrapPage();
 });
+
+var API_BASE = localStorage.getItem('expenseai-api-base') || 'http://localhost:5000/api';
+
+function getAuthToken() {
+    return localStorage.getItem('expenseai-token');
+}
+
+function getCurrentUser() {
+    var raw = localStorage.getItem('expenseai-user');
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveSession(payload) {
+    localStorage.setItem('expenseai-token', payload.token);
+    localStorage.setItem('expenseai-user', JSON.stringify(payload.user));
+    if (payload.user && payload.user.companyCode) {
+        localStorage.setItem('expenseai-company-code', payload.user.companyCode);
+    }
+}
+
+function clearSession() {
+    localStorage.removeItem('expenseai-token');
+    localStorage.removeItem('expenseai-user');
+}
+
+function redirectByRole(role) {
+    if (role === 'admin') {
+        window.location.href = 'admin.html';
+        return;
+    }
+    if (role === 'manager') {
+        window.location.href = 'manager.html';
+        return;
+    }
+    window.location.href = 'employee.html';
+}
+
+function apiFetch(path, options) {
+    var opts = options || {};
+    var headers = opts.headers || {};
+    headers['Content-Type'] = 'application/json';
+
+    var token = getAuthToken();
+    if (token) {
+        headers.Authorization = 'Bearer ' + token;
+    }
+
+    return fetch(API_BASE + path, {
+        method: opts.method || 'GET',
+        headers: headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+    }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) {
+                var message = data.message || 'Request failed';
+                throw new Error(message);
+            }
+            return data;
+        });
+    });
+}
+
+function initSession() {
+    var links = document.querySelectorAll('a[href="index.html"]');
+    links.forEach(function (link) {
+        if (String(link.textContent || '').toLowerCase().indexOf('logout') !== -1) {
+            link.addEventListener('click', function () {
+                clearSession();
+            });
+        }
+    });
+}
+
+function bootstrapPage() {
+    var page = window.location.pathname.split('/').pop() || 'index.html';
+    var user = getCurrentUser();
+
+    if (page !== 'index.html') {
+        if (!getAuthToken() || !user) {
+            window.location.href = 'index.html';
+            return;
+        }
+    }
+
+    if (page === 'employee.html') {
+        loadEmployeeExpenses();
+    }
+    if (page === 'manager.html') {
+        loadPendingApprovals();
+    }
+    if (page === 'admin.html') {
+        loadWorkflows();
+    }
+}
 
 // ==========================================
 // THEME MANAGEMENT
@@ -71,10 +172,31 @@ function handleLogin() {
     const email = document.getElementById('login-email');
     const password = document.getElementById('login-password');
     if (email && password && email.value && password.value) {
+        var companyCode = localStorage.getItem('expenseai-company-code') || window.prompt('Enter your company code');
+        if (!companyCode) {
+            showToast('Company code is required', 'error');
+            return;
+        }
+
         showToast('Signing in...', 'info');
-        setTimeout(function () {
-            window.location.href = 'dashboard.html';
-        }, 800);
+        apiFetch('/auth/login', {
+            method: 'POST',
+            body: {
+                companyCode: String(companyCode).toUpperCase(),
+                email: email.value.trim(),
+                password: password.value
+            }
+        })
+            .then(function (data) {
+                saveSession(data);
+                showToast('Signed in successfully', 'success');
+                setTimeout(function () {
+                    redirectByRole(data.user.role);
+                }, 500);
+            })
+            .catch(function (err) {
+                showToast(err.message, 'error');
+            });
     } else {
         showToast('Please fill in all fields', 'error');
     }
@@ -86,15 +208,42 @@ function handleSignup() {
     const email = document.getElementById('signup-email');
     const password = document.getElementById('signup-password');
     if (company && country && email && password && company.value && country.value && email.value && password.value) {
-        showToast('Creating your account...', 'info');
+        var nameParts = email.value.split('@')[0].split(/[._-]/);
+        var firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : 'User';
+        var lastName = nameParts[1] ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1) : 'Admin';
+        var companyCode = company.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10) || 'COMPANY1';
+        var detectedCurrency = 'USD';
         const currency = document.getElementById('detected-currency');
-        if (currency) {
-            localStorage.setItem('expenseai-currency', currency.textContent);
+        if (currency && currency.textContent) {
+            detectedCurrency = currency.textContent.split(' ')[0].trim();
         }
-        localStorage.setItem('expenseai-company', company.value);
-        setTimeout(function () {
-            window.location.href = 'dashboard.html';
-        }, 1200);
+
+        showToast('Creating your account...', 'info');
+        apiFetch('/auth/register', {
+            method: 'POST',
+            body: {
+                companyCode: companyCode,
+                companyName: company.value.trim(),
+                baseCurrency: detectedCurrency,
+                countryCode: country.value.slice(0, 2).toUpperCase(),
+                firstName: firstName,
+                lastName: lastName,
+                email: email.value.trim(),
+                password: password.value,
+                role: 'admin'
+            }
+        })
+            .then(function (data) {
+                saveSession(data);
+                localStorage.setItem('expenseai-company', company.value);
+                showToast('Account created. Company code: ' + companyCode, 'success');
+                setTimeout(function () {
+                    redirectByRole(data.user.role);
+                }, 800);
+            })
+            .catch(function (err) {
+                showToast(err.message, 'error');
+            });
     } else {
         showToast('Please fill in all fields', 'error');
     }
@@ -405,10 +554,32 @@ function filterByCategory(category) {
 // ==========================================
 
 function submitExpense() {
-    showToast('Expense submitted successfully!', 'success');
-    setTimeout(function () {
-        closeExpenseModal();
-    }, 500);
+    var titleInput = document.getElementById('expense-vendor');
+    var categoryInput = document.getElementById('expense-category');
+    var dateInput = document.getElementById('expense-date');
+    var amountInput = document.getElementById('expense-amount');
+    var currencyInput = document.getElementById('expense-currency');
+    var descriptionInput = document.getElementById('expense-desc');
+
+    apiFetch('/expenses', {
+        method: 'POST',
+        body: {
+            title: titleInput ? titleInput.value : 'Expense',
+            description: descriptionInput ? descriptionInput.value : '',
+            category: categoryInput ? categoryInput.value : 'other',
+            expenseDate: dateInput ? dateInput.value : new Date().toISOString().slice(0, 10),
+            originalAmount: amountInput ? Number(amountInput.value || 0) : 0,
+            originalCurrency: currencyInput ? currencyInput.value : 'USD'
+        }
+    })
+        .then(function () {
+            showToast('Expense submitted successfully!', 'success');
+            closeExpenseModal();
+            loadEmployeeExpenses();
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
 
 // ==========================================
@@ -416,58 +587,39 @@ function submitExpense() {
 // ==========================================
 
 function approveExpense(id) {
-    var card = document.getElementById(id);
-    if (!card) return;
-
-    // Animate
-    card.style.transition = 'all 0.5s ease';
-    card.style.borderColor = 'rgba(34, 197, 94, 0.3)';
-    card.style.background = 'rgba(34, 197, 94, 0.05)';
-
-    // Update badge
-    var badge = card.querySelector('.badge-pending');
-    if (badge) {
-        badge.className = 'badge badge-approved';
-        badge.textContent = 'Approved';
-    }
-
-    // Disable buttons
-    var buttons = card.querySelectorAll('button');
-    buttons.forEach(function (b) {
-        if (b.textContent === 'Approve' || b.textContent === 'Reject') {
-            b.disabled = true;
-            b.style.opacity = '0.5';
-            b.style.cursor = 'not-allowed';
+    apiFetch('/approvals/action', {
+        method: 'POST',
+        body: {
+            expenseId: Number(id),
+            action: 'approved'
         }
-    });
-
-    showToast('Expense approved! Forwarded to next approver.', 'success');
+    })
+        .then(function () {
+            showToast('Expense approved', 'success');
+            loadPendingApprovals();
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
 
 function rejectExpense(id) {
-    var card = document.getElementById(id);
-    if (!card) return;
-
-    card.style.transition = 'all 0.5s ease';
-    card.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-    card.style.background = 'rgba(239, 68, 68, 0.05)';
-
-    var badge = card.querySelector('.badge-pending');
-    if (badge) {
-        badge.className = 'badge badge-rejected';
-        badge.textContent = 'Rejected';
-    }
-
-    var buttons = card.querySelectorAll('button');
-    buttons.forEach(function (b) {
-        if (b.textContent === 'Approve' || b.textContent === 'Reject') {
-            b.disabled = true;
-            b.style.opacity = '0.5';
-            b.style.cursor = 'not-allowed';
+    var reason = window.prompt('Add rejection comment (optional):') || '';
+    apiFetch('/approvals/action', {
+        method: 'POST',
+        body: {
+            expenseId: Number(id),
+            action: 'rejected',
+            comment: reason
         }
-    });
-
-    showToast('Expense rejected.', 'error');
+    })
+        .then(function () {
+            showToast('Expense rejected', 'success');
+            loadPendingApprovals();
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
 
 function toggleComment(id) {
@@ -515,7 +667,127 @@ function closeUserModal() {
 // ==========================================
 
 function addNewRule() {
-    showToast('New rule template added!', 'success');
+    var name = window.prompt('Workflow name');
+    if (!name) return;
+
+    var approverId = window.prompt('Approver user ID for step 1 (manager/admin user id)');
+    if (!approverId) {
+        showToast('Approver user ID is required', 'error');
+        return;
+    }
+
+    apiFetch('/workflows', {
+        method: 'POST',
+        body: {
+            name: name,
+            appliesToCategory: 'all',
+            approvalMode: 'SEQUENTIAL',
+            steps: [
+                {
+                    stepOrder: 1,
+                    name: 'Manager Approval',
+                    stepType: 'ANY_OF',
+                    approverUserIds: [Number(approverId)]
+                }
+            ]
+        }
+    })
+        .then(function () {
+            showToast('Workflow created', 'success');
+            loadWorkflows();
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function statusBadgeClass(status) {
+    if (status === 'approved') return 'badge badge-approved';
+    if (status === 'rejected') return 'badge badge-rejected';
+    return 'badge badge-pending';
+}
+
+function loadEmployeeExpenses() {
+    var container = document.getElementById('expense-cards');
+    if (!container) return;
+
+    apiFetch('/expenses')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-6"><p style="color: var(--text-secondary);">No expenses yet.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (row) {
+                return '<div class="glass-card p-5 expense-card" data-status="' + row.status + '" data-category="' + row.category + '">' +
+                    '<div class="flex items-start justify-between mb-4">' +
+                    '<div><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.title + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + row.expense_date + '</p></div>' +
+                    '<span class="' + statusBadgeClass(row.status) + '">' + row.status + '</span></div>' +
+                    '<p class="text-xs mb-3" style="color: var(--text-secondary);">' + (row.description || '') + '</p>' +
+                    '<div class="flex items-end justify-between"><div>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Converted Amount</p>' +
+                    '<p class="text-xl font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + row.original_currency + ' ' + Number(row.original_amount).toFixed(2) + ' at rate ' + Number(row.exchange_rate).toFixed(4) + '</p>' +
+                    '</div><div class="text-right"><p class="text-xs" style="color: var(--text-muted);">Category</p>' +
+                    '<p class="text-sm font-medium" style="color: var(--text-secondary);">' + row.category + '</p></div></div></div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function loadPendingApprovals() {
+    var container = document.getElementById('pending-approvals-list');
+    if (!container) return;
+
+    apiFetch('/approvals/pending')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-5"><p style="color: var(--text-secondary);">No pending approvals assigned.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (row) {
+                return '<div class="glass-card p-6">' +
+                    '<div class="flex flex-col lg:flex-row lg:items-center gap-5">' +
+                    '<div class="flex-1"><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-secondary);">' + row.title + ' | ' + row.category + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Workflow: ' + row.workflowName + ' | Step ' + (row.currentStepOrder || '-') + '</p></div>' +
+                    '<div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p></div>' +
+                    '<button onclick="approveExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>' +
+                    '<button onclick="rejectExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button></div>' +
+                    '</div></div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function loadWorkflows() {
+    var container = document.getElementById('workflow-list');
+    if (!container) return;
+
+    apiFetch('/workflows')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-4"><p style="color: var(--text-secondary);">No workflows configured yet.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (workflow) {
+                var stepCount = workflow.steps ? workflow.steps.length : 0;
+                return '<div class="glass-card p-4 mb-3">' +
+                    '<div class="flex items-center justify-between"><div><p class="text-sm font-bold" style="color: var(--text-primary);">' + workflow.name + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Mode: ' + workflow.approval_mode + ' | Category: ' + workflow.applies_to_category + '</p></div>' +
+                    '<span class="badge badge-info">' + stepCount + ' step(s)</span></div></div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
 
 // ==========================================
