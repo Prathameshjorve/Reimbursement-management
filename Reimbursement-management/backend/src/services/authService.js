@@ -6,6 +6,8 @@ const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const auditService = require('./auditService');
 
+const ALLOWED_ROLES = new Set(['admin', 'manager', 'employee', 'finance', 'director']);
+
 async function register(payload, meta) {
   const {
     companyCode,
@@ -46,7 +48,10 @@ async function register(payload, meta) {
       isNewCompany = true;
     }
 
-    const resolvedRole = role || (isNewCompany ? 'admin' : 'employee');
+    const resolvedRole = role ? String(role).toLowerCase() : (isNewCompany ? 'admin' : 'employee');
+    if (!ALLOWED_ROLES.has(resolvedRole)) {
+      throw new HttpError(400, 'Invalid role');
+    }
 
     const existing = await userModel.findByCompanyAndEmail(company.id, email, connection);
     if (existing) {

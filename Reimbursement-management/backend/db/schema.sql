@@ -21,7 +21,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   first_name VARCHAR(80) NOT NULL,
   last_name VARCHAR(80) NOT NULL,
-  role ENUM('admin', 'manager', 'employee') NOT NULL,
+  role ENUM('admin', 'manager', 'employee', 'finance', 'director') NOT NULL,
   manager_user_id BIGINT UNSIGNED NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   last_login_at DATETIME NULL,

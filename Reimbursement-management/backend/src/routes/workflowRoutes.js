@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.use(requireAuth);
 router.post('/', requireRoles('admin'), workflowController.createWorkflow);
-router.get('/', requireRoles('admin'), workflowController.listWorkflows);
+router.get('/', requireRoles('admin', 'director'), workflowController.listWorkflows);
 
 module.exports = router;

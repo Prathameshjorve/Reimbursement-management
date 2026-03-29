@@ -152,7 +152,7 @@ function canUserAct(context, userId, role) {
     return false;
   }
 
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'director') {
     return true;
   }
 

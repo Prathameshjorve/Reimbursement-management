@@ -3,6 +3,7 @@ const HttpError = require('../utils/httpError');
 const expenseModel = require('../models/expenseModel');
 const approvalModel = require('../models/approvalModel');
 const workflowModel = require('../models/workflowModel');
+const userModel = require('../models/userModel');
 const ruleEngineService = require('./ruleEngineService');
 const auditService = require('./auditService');
 
@@ -21,7 +22,7 @@ function groupBy(items, keyGetter) {
 function findActionStepId(context, userId, role) {
   const mode = context.workflow.approval_mode;
 
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'director') {
     if (context.firstPendingStep) {
       return context.firstPendingStep.step.id;
     }
@@ -151,8 +152,19 @@ async function listPendingForApprover(auth) {
     return [];
   }
 
-  const expenseIds = pendingExpenses.map((item) => item.id);
-  const workflowIds = [...new Set(pendingExpenses.map((item) => item.workflow_id).filter(Boolean))];
+  let scopedPendingExpenses = pendingExpenses;
+  if (auth.role === 'manager') {
+    const managedUserIds = await userModel.getManagedUserIds(auth.companyId, auth.userId, null);
+    const visibleSubmitters = new Set([auth.userId, ...managedUserIds]);
+    scopedPendingExpenses = pendingExpenses.filter((expense) => visibleSubmitters.has(expense.submitted_by_user_id));
+  }
+
+  const expenseIds = scopedPendingExpenses.map((item) => item.id);
+  if (!expenseIds.length) {
+    return [];
+  }
+
+  const workflowIds = [...new Set(scopedPendingExpenses.map((item) => item.workflow_id).filter(Boolean))];
 
   const [workflows, workflowSteps, workflowApprovers, approvals] = await Promise.all([
     workflowModel.getWorkflowsByIds(auth.companyId, workflowIds, null),
@@ -168,7 +180,7 @@ async function listPendingForApprover(auth) {
 
   const actionable = [];
 
-  for (const expense of pendingExpenses) {
+  for (const expense of scopedPendingExpenses) {
     const workflow = workflowsById.get(expense.workflow_id);
     if (!workflow) {
       continue;

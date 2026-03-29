@@ -3,6 +3,7 @@ const HttpError = require('../utils/httpError');
 const companyModel = require('../models/companyModel');
 const workflowModel = require('../models/workflowModel');
 const expenseModel = require('../models/expenseModel');
+const userModel = require('../models/userModel');
 const ruleEngineService = require('./ruleEngineService');
 const currencyService = require('./currencyService');
 const auditService = require('./auditService');
@@ -103,6 +104,13 @@ async function getExpenseById(auth, expenseId) {
     throw new HttpError(403, 'Employees can only view their own expenses');
   }
 
+  if (auth.role === 'manager') {
+    const managedIds = await userModel.getManagedUserIds(auth.companyId, auth.userId, null);
+    if (expense.submitted_by_user_id !== auth.userId && !managedIds.includes(expense.submitted_by_user_id)) {
+      throw new HttpError(403, 'Managers can only view their team expenses');
+    }
+  }
+
   const state = await ruleEngineService.recalculateApproval(expenseId, auth.companyId, null);
 
   return {
@@ -118,11 +126,28 @@ async function getExpenseById(auth, expenseId) {
 }
 
 async function listExpenses(auth, query) {
-  const filters = {
-    status: query.status || null,
-    userId: auth.role === 'employee' ? auth.userId : query.userId ? Number(query.userId) : null
-  };
+  const status = query.status || null;
 
+  if (auth.role === 'employee') {
+    return expenseModel.listExpenses(auth.companyId, { status, userId: auth.userId }, null);
+  }
+
+  if (auth.role === 'manager') {
+    const managedUserIds = await userModel.getManagedUserIds(auth.companyId, auth.userId, null);
+    const scopedIds = [auth.userId, ...managedUserIds];
+    const scopedExpenses = await Promise.all(
+      scopedIds.map((userId) => expenseModel.listExpenses(auth.companyId, { status, userId }, null))
+    );
+
+    return scopedExpenses
+      .flat()
+      .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+  }
+
+  const filters = {
+    status,
+    userId: query.userId ? Number(query.userId) : null
+  };
   return expenseModel.listExpenses(auth.companyId, filters, null);
 }
 

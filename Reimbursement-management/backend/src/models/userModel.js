@@ -66,10 +66,79 @@ async function findByEmailGlobal(email, connection) {
   return rows;
 }
 
+async function listUsers(companyId, connection) {
+  return execute(
+    connection,
+    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active, created_at
+     FROM users
+     WHERE company_id = ?
+     ORDER BY created_at DESC`,
+    [companyId]
+  );
+}
+
+async function listUsersByIds(companyId, userIds, connection) {
+  if (!userIds || !userIds.length) {
+    return [];
+  }
+
+  const placeholders = userIds.map(() => '?').join(', ');
+  return execute(
+    connection,
+    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active, created_at
+     FROM users
+     WHERE company_id = ? AND id IN (${placeholders})
+     ORDER BY created_at DESC`,
+    [companyId, ...userIds]
+  );
+}
+
+async function getManagedUserIds(companyId, managerUserId, connection) {
+  const all = await execute(
+    connection,
+    `SELECT id, manager_user_id
+     FROM users
+     WHERE company_id = ? AND is_active = 1`,
+    [companyId]
+  );
+
+  const childrenByManager = new Map();
+  for (const row of all) {
+    const parentId = row.manager_user_id || null;
+    if (!childrenByManager.has(parentId)) {
+      childrenByManager.set(parentId, []);
+    }
+    childrenByManager.get(parentId).push(row.id);
+  }
+
+  const visited = new Set();
+  const queue = [managerUserId];
+  const managed = [];
+
+  while (queue.length) {
+    const current = queue.shift();
+    const children = childrenByManager.get(current) || [];
+    for (const childId of children) {
+      if (visited.has(childId)) {
+        continue;
+      }
+
+      visited.add(childId);
+      managed.push(childId);
+      queue.push(childId);
+    }
+  }
+
+  return managed;
+}
+
 module.exports = {
   createUser,
   findByCompanyAndEmail,
   findById,
   updateLastLogin,
-  findByEmailGlobal
+  findByEmailGlobal,
+  listUsers,
+  listUsersByIds,
+  getManagedUserIds
 };

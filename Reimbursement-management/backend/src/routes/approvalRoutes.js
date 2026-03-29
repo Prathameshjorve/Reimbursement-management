@@ -6,7 +6,7 @@ const { requireRoles } = require('../middleware/rbac');
 const router = express.Router();
 
 router.use(requireAuth);
-router.post('/action', requireRoles('admin', 'manager'), approvalController.actionApproval);
-router.get('/pending', requireRoles('admin', 'manager'), approvalController.listPendingApprovals);
+router.post('/action', requireRoles('admin', 'manager', 'finance', 'director'), approvalController.actionApproval);
+router.get('/pending', requireRoles('admin', 'manager', 'finance', 'director'), approvalController.listPendingApprovals);
 
 module.exports = router;
