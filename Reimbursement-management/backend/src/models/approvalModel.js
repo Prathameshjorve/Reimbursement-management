@@ -24,9 +24,11 @@ async function upsertApproval(data, connection) {
 async function listExpenseApprovals(expenseId, companyId, connection) {
   return execute(
     connection,
-    `SELECT id, expense_id, workflow_step_id, approver_user_id, action, comment, acted_at
-     FROM expense_approvals
-     WHERE expense_id = ? AND company_id = ?`,
+    `SELECT ea.id, ea.expense_id, ea.workflow_step_id, ea.approver_user_id, ea.action, ea.comment, ea.acted_at,
+            u.first_name AS approver_first_name, u.last_name AS approver_last_name, u.role AS approver_role
+     FROM expense_approvals ea
+     INNER JOIN users u ON u.id = ea.approver_user_id
+     WHERE ea.expense_id = ? AND ea.company_id = ?`,
     [expenseId, companyId]
   );
 }
@@ -39,9 +41,11 @@ async function listApprovalsByExpenseIds(expenseIds, companyId, connection) {
   const placeholders = expenseIds.map(() => '?').join(', ');
   return execute(
     connection,
-    `SELECT id, expense_id, workflow_step_id, approver_user_id, action, comment, acted_at
-     FROM expense_approvals
-     WHERE company_id = ? AND expense_id IN (${placeholders})`,
+    `SELECT ea.id, ea.expense_id, ea.workflow_step_id, ea.approver_user_id, ea.action, ea.comment, ea.acted_at,
+            u.first_name AS approver_first_name, u.last_name AS approver_last_name, u.role AS approver_role
+     FROM expense_approvals ea
+     INNER JOIN users u ON u.id = ea.approver_user_id
+     WHERE ea.company_id = ? AND ea.expense_id IN (${placeholders})`,
     [companyId, ...expenseIds]
   );
 }

@@ -7,11 +7,24 @@ document.addEventListener('DOMContentLoaded', function () {
     loadCountries();
     initPasswordStrength();
     initSession();
+    if (handleOAuthCallback()) {
+        return;
+    }
     bootstrapPage();
 });
 
 var API_BASE = localStorage.getItem('expenseai-api-base') || 'http://localhost:5000/api';
 var VALID_EXPENSE_CATEGORIES = ['travel', 'food', 'accommodation', 'transport', 'supplies', 'other'];
+var CURRENCY_SYMBOLS = {
+    INR: '₹',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+    CNY: '¥',
+    AUD: 'A$',
+    CAD: 'C$'
+};
 
 function normalizeValue(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -29,28 +42,110 @@ function isValidCompanyCode(value) {
     return /^[A-Z0-9]{2,20}$/.test(value);
 }
 
+function getCurrencySymbol(currencyCode) {
+    var code = normalizeValue(currencyCode).toUpperCase();
+    if (!code) return '';
+    return CURRENCY_SYMBOLS[code] || (code + ' ');
+}
+
+function getCompanyCurrencyCode() {
+    var user = getCurrentUser();
+    var userCurrency = normalizeValue(user && user.baseCurrency).toUpperCase();
+    if (/^[A-Z]{3}$/.test(userCurrency)) {
+        return userCurrency;
+    }
+
+    var stored = normalizeValue(localStorage.getItem('expenseai-company-currency')).toUpperCase();
+    if (/^[A-Z]{3}$/.test(stored)) {
+        return stored;
+    }
+
+    var dashCurrency = document.getElementById('dash-currency');
+    if (dashCurrency && dashCurrency.textContent) {
+        var dashCode = normalizeValue(dashCurrency.textContent.split(' ')[0]).toUpperCase();
+        if (/^[A-Z]{3}$/.test(dashCode)) {
+            return dashCode;
+        }
+    }
+
+    var detectedCurrency = document.getElementById('detected-currency');
+    if (detectedCurrency && detectedCurrency.textContent) {
+        var detectedCode = normalizeValue(detectedCurrency.textContent.split(' ')[0]).toUpperCase();
+        if (/^[A-Z]{3}$/.test(detectedCode)) {
+            return detectedCode;
+        }
+    }
+
+    return 'INR';
+}
+
+function formatCurrencyAmount(amount, currencyCode, decimals) {
+    var n = Number(amount);
+    var places = typeof decimals === 'number' ? decimals : 2;
+    if (!isFinite(n)) {
+        n = 0;
+    }
+
+    var symbol = getCurrencySymbol(currencyCode);
+    var formatted = n.toLocaleString('en-IN', {
+        minimumFractionDigits: places,
+        maximumFractionDigits: places
+    });
+
+    return symbol + formatted;
+}
+
 function isValidDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-    var date = new Date(value + 'T00:00:00');
-    return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    var parts = value.split('-');
+    var year = Number(parts[0]);
+    var month = Number(parts[1]);
+    var day = Number(parts[2]);
+
+    var utcDate = new Date(Date.UTC(year, month - 1, day));
+    return utcDate.getUTCFullYear() === year &&
+        utcDate.getUTCMonth() === (month - 1) &&
+        utcDate.getUTCDate() === day;
+}
+
+function normalizeExpenseDate(value) {
+    var raw = normalizeValue(value);
+    if (!raw) return '';
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return raw;
+    }
+
+    var ymdMatch = raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    if (ymdMatch) {
+        var y = ymdMatch[1];
+        var m = ymdMatch[2].padStart(2, '0');
+        var d = ymdMatch[3].padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+
+    var dmyMatch = raw.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+    if (dmyMatch) {
+        var day = dmyMatch[1].padStart(2, '0');
+        var month = dmyMatch[2].padStart(2, '0');
+        var year = dmyMatch[3].length === 2 ? ('20' + dmyMatch[3]) : dmyMatch[3];
+        return year + '-' + month + '-' + day;
+    }
+
+    return raw;
 }
 
 function isFutureDate(value) {
-    var selected = new Date(value + 'T00:00:00');
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return selected.getTime() > today.getTime();
+    var parts = value.split('-');
+    var selectedUtc = Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+
+    var now = new Date();
+    var todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    return selectedUtc > todayUtc;
 }
 
 function ensureRoleAccess(page, role) {
-    var roleByPage = {
-        'admin.html': 'admin',
-        'manager.html': 'manager',
-        'employee.html': 'employee'
-    };
-
-    if (!roleByPage[page]) return true;
-    return role === roleByPage[page] || role === 'admin';
+    return isPageAllowedForRole(page, role);
 }
 
 var ROLE_HOME = {
@@ -62,12 +157,30 @@ var ROLE_HOME = {
 };
 
 var ROLE_ALLOWED_PAGES = {
-    admin: ['admin.html', 'employee.html', 'manager.html', 'dashboard.html'],
+    admin: ['admin.html', 'dashboard.html'],
     manager: ['manager.html', 'employee.html', 'dashboard.html'],
     employee: ['employee.html', 'dashboard.html'],
     finance: ['finance.html', 'dashboard.html'],
     director: ['director.html', 'dashboard.html']
 };
+
+var KNOWN_PAGES = ['index.html', 'dashboard.html', 'employee.html', 'manager.html', 'finance.html', 'director.html', 'admin.html'];
+var approvalRefreshTimer = null;
+var dashboardRefreshTimer = null;
+
+function getCurrentPage(defaultPage) {
+    var pathname = String(window.location.pathname || '');
+    pathname = pathname.replace(/\/+$/, '');
+
+    var parts = pathname.split('/').filter(Boolean);
+    var last = parts.length ? String(parts[parts.length - 1]).toLowerCase() : '';
+
+    if (!last || KNOWN_PAGES.indexOf(last) === -1) {
+        return defaultPage;
+    }
+
+    return last;
+}
 
 function getAuthToken() {
     return localStorage.getItem('expenseai-token');
@@ -89,17 +202,35 @@ function saveSession(payload) {
     if (payload.user && payload.user.companyCode) {
         localStorage.setItem('expenseai-company-code', payload.user.companyCode);
     }
+    if (payload.user && payload.user.baseCurrency) {
+        localStorage.setItem('expenseai-company-currency', String(payload.user.baseCurrency).toUpperCase());
+    }
 }
 
 function clearSession() {
     localStorage.removeItem('expenseai-token');
     localStorage.removeItem('expenseai-user');
     localStorage.removeItem('expenseai-company-code');
+    localStorage.removeItem('expenseai-company-currency');
 }
 
 function redirectByRole(role) {
     var destination = ROLE_HOME[String(role || '').toLowerCase()] || 'employee.html';
-    window.location.href = destination;
+    var currentPage = getCurrentPage('index.html');
+    if (currentPage === destination) {
+        return;
+    }
+
+    var now = Date.now();
+    var lastRedirectTs = Number(sessionStorage.getItem('expenseai-last-redirect-ts') || '0');
+    var lastRedirectDest = sessionStorage.getItem('expenseai-last-redirect-dest') || '';
+    if (lastRedirectDest === destination && (now - lastRedirectTs) < 1200) {
+        return;
+    }
+
+    sessionStorage.setItem('expenseai-last-redirect-ts', String(now));
+    sessionStorage.setItem('expenseai-last-redirect-dest', destination);
+    window.location.assign(destination);
 }
 
 function isPageAllowedForRole(page, role) {
@@ -119,8 +250,47 @@ function applyRoleNavigationVisibility(role) {
 
         if (!isPageAllowedForRole(href, normalizedRole)) {
             link.classList.add('hidden');
+            link.style.display = 'none';
+        } else {
+            link.classList.remove('hidden');
+            link.style.display = '';
         }
     });
+}
+
+function getRolePanelLabel(role) {
+    var normalizedRole = String(role || '').toLowerCase();
+    if (normalizedRole === 'manager') return 'Manager Panel';
+    if (normalizedRole === 'employee') return 'Employee Panel';
+    if (normalizedRole === 'finance') return 'Finance Panel';
+    if (normalizedRole === 'director') return 'Director Panel';
+    if (normalizedRole === 'admin') return 'Admin Panel';
+    return 'User Panel';
+}
+
+function applyPanelIdentityBadge(role) {
+    var topbar = document.querySelector('.topbar');
+    if (!topbar) return;
+
+    var leftSection = topbar.firstElementChild;
+    if (!leftSection) return;
+
+    var label = getRolePanelLabel(role);
+    var badge = document.getElementById('current-panel-badge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'current-panel-badge';
+        badge.className = 'inline-flex items-center px-2.5 py-1 mt-2 rounded-lg text-xs font-semibold bg-indigo-500/15 border border-indigo-500/25 text-indigo-400';
+
+        var heading = leftSection.querySelector('h1');
+        if (heading) {
+            heading.insertAdjacentElement('afterend', badge);
+        } else {
+            leftSection.prepend(badge);
+        }
+    }
+
+    badge.textContent = label;
 }
 
 function apiFetch(path, options) {
@@ -169,9 +339,64 @@ function initSession() {
     });
 }
 
+function handleOAuthCallback() {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    var userRaw = params.get('user');
+    var oauthError = params.get('oauthError');
+
+    if (oauthError) {
+        var cleanErrorUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanErrorUrl);
+        showToast('Google login failed. Please try again.', 'error');
+        return false;
+    }
+
+    if (!token || !userRaw) {
+        return false;
+    }
+
+    try {
+        var user = JSON.parse(userRaw);
+        saveSession({ token: token, user: user });
+        var cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        showToast('Signed in with Google', 'success');
+        setTimeout(function () {
+            redirectByRole(user.role);
+        }, 250);
+        return true;
+    } catch (_error) {
+        showToast('Google login response was invalid', 'error');
+        return false;
+    }
+}
+
+function startGoogleLogin() {
+    var companyCodeInput = document.getElementById('login-company-code');
+    var companyCode = normalizeValue(companyCodeInput ? companyCodeInput.value : '').toUpperCase();
+    var url = 'http://localhost:5000/api/auth/google';
+
+    if (companyCode) {
+        if (!isValidCompanyCode(companyCode)) {
+            showToast('Company code must use only letters and numbers', 'error');
+            return;
+        }
+
+        url += '?companyCode=' + encodeURIComponent(companyCode);
+    }
+
+    window.location.href = url;
+}
+
 function bootstrapPage() {
-    var page = window.location.pathname.split('/').pop() || 'index.html';
+    var page = getCurrentPage('index.html');
     var user = getCurrentUser();
+
+    if (page === 'index.html' && getAuthToken() && user && user.role) {
+        redirectByRole(user.role);
+        return;
+    }
 
     if (page !== 'index.html') {
         if (!getAuthToken() || !user) {
@@ -180,12 +405,12 @@ function bootstrapPage() {
         }
 
         if (!ensureRoleAccess(page, user.role)) {
-            showToast('You do not have access to that page', 'error');
-            setTimeout(function () {
-                redirectByRole(user.role);
-            }, 500);
+            redirectByRole(user.role);
             return;
         }
+
+        applyRoleNavigationVisibility(user.role);
+        applyPanelIdentityBadge(user.role);
     }
 
     if (page === 'employee.html') {
@@ -193,16 +418,135 @@ function bootstrapPage() {
     }
     if (page === 'manager.html') {
         loadPendingApprovals();
+        initApprovalWorkspace();
     }
     if (page === 'admin.html') {
+        loadAdminUsers();
         loadWorkflows();
     }
     if (page === 'finance.html') {
         loadFinanceApprovals();
+        initApprovalWorkspace();
+    }
+    if (page === 'director.html') {
+        loadDirectorExpenses();
+        initApprovalWorkspace();
+    }
+    if (page === 'dashboard.html') {
+        loadDashboardAnalytics();
+        if (!dashboardRefreshTimer) {
+            dashboardRefreshTimer = setInterval(loadDashboardAnalytics, 30000);
+        }
+    }
+}
+
+function refreshApprovalsForCurrentPage() {
+    var page = getCurrentPage('dashboard.html');
+    if (page === 'manager.html') {
+        loadPendingApprovals();
+        return;
+    }
+    if (page === 'finance.html') {
+        loadFinanceApprovals();
+        return;
     }
     if (page === 'director.html') {
         loadDirectorExpenses();
     }
+}
+
+function renderNotificationPanel(rows) {
+    var panel = document.getElementById('approval-notification-panel');
+    if (!panel) return;
+
+    var total = Array.isArray(rows) ? rows.length : 0;
+    var header = '<div class="notification-panel-header">' +
+        '<p class="text-xs font-semibold" style="color: var(--text-primary);">Approval Notifications</p>' +
+        '<span class="badge badge-info text-xs">' + total + '</span>' +
+        '</div>';
+
+    if (!rows || !rows.length) {
+        panel.innerHTML = header + '<div class="notification-panel-body"><div class="notification-empty">No new approval notifications.</div></div>';
+        return;
+    }
+
+    var items = rows.slice(0, 6).map(function (row) {
+        var submittedBy = ((row.submitted_by_first_name || '') + ' ' + (row.submitted_by_last_name || '')).trim() || 'Employee';
+        var title = row.title || 'Expense';
+        var amount = formatCurrencyAmount(row.converted_amount || 0, getCompanyCurrencyCode(), 0);
+        var submittedAt = row.submitted_at ? new Date(row.submitted_at).toLocaleString() : 'N/A';
+        return '<div class="notification-item">' +
+            '<div class="flex items-start justify-between gap-2">' +
+            '<p class="text-xs font-semibold" style="color: var(--text-primary);">' + submittedBy + '</p>' +
+            '<span class="badge badge-pending text-xs">Step ' + (row.currentStepOrder || '-') + '</span>' +
+            '</div>' +
+            '<p class="text-xs mt-1" style="color: var(--text-secondary);">' + title + '</p>' +
+            '<div class="flex items-center justify-between mt-2">' +
+            '<p class="text-xs font-semibold text-indigo-400">' + amount + '</p>' +
+            '<p class="text-xs" style="color: var(--text-muted);">' + submittedAt + '</p>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+
+    panel.innerHTML = header + '<div class="notification-panel-body">' + items + '</div>';
+}
+
+function toggleApprovalNotifications(event) {
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    var panel = document.getElementById('approval-notification-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+}
+
+function loadApprovalNotifications() {
+    var countNode = document.getElementById('approval-notification-count');
+    var dotNode = document.getElementById('approval-notification-dot');
+
+    if (!countNode && !dotNode) {
+        return;
+    }
+
+    apiFetch('/approvals/pending')
+        .then(function (rows) {
+            var count = Array.isArray(rows) ? rows.length : 0;
+
+            if (countNode) {
+                countNode.textContent = String(count);
+                countNode.classList.toggle('hidden', count === 0);
+            }
+
+            if (dotNode) {
+                dotNode.classList.toggle('hidden', count === 0);
+            }
+
+            renderNotificationPanel(rows || []);
+        })
+        .catch(function () {
+            if (countNode) {
+                countNode.textContent = '0';
+                countNode.classList.add('hidden');
+            }
+            if (dotNode) {
+                dotNode.classList.add('hidden');
+            }
+            renderNotificationPanel([]);
+        });
+}
+
+function initApprovalWorkspace() {
+    loadApprovalNotifications();
+
+    if (approvalRefreshTimer) {
+        window.clearInterval(approvalRefreshTimer);
+    }
+
+    approvalRefreshTimer = window.setInterval(function () {
+        loadApprovalNotifications();
+        refreshApprovalsForCurrentPage();
+    }, 20000);
 }
 
 // ==========================================
@@ -267,10 +611,11 @@ function switchTab(tab) {
 function handleLogin() {
     const email = document.getElementById('login-email');
     const password = document.getElementById('login-password');
+    const companyCodeInput = document.getElementById('login-company-code');
     if (email && password) {
         var normalizedEmail = normalizeEmail(email.value);
         var rawPassword = password.value || '';
-        var companyCode = normalizeValue(localStorage.getItem('expenseai-company-code') || window.prompt('Enter your company code'));
+        var companyCode = normalizeValue((companyCodeInput ? companyCodeInput.value : '') || localStorage.getItem('expenseai-company-code'));
 
         if (!normalizedEmail || !rawPassword) {
             showToast('Please enter both email and password', 'error');
@@ -282,22 +627,19 @@ function handleLogin() {
             return;
         }
 
-        if (!companyCode) {
-            showToast('Company code is required', 'error');
-            return;
-        }
-
-        companyCode = companyCode.toUpperCase();
-        if (!isValidCompanyCode(companyCode)) {
-            showToast('Company code must use only letters and numbers', 'error');
-            return;
+        if (companyCode) {
+            companyCode = companyCode.toUpperCase();
+            if (!isValidCompanyCode(companyCode)) {
+                showToast('Company code must use only letters and numbers', 'error');
+                return;
+            }
         }
 
         showToast('Signing in...', 'info');
         apiFetch('/auth/login', {
             method: 'POST',
             body: {
-                companyCode: companyCode,
+                companyCode: companyCode || undefined,
                 email: normalizedEmail,
                 password: rawPassword
             }
@@ -376,6 +718,9 @@ function handleSignup() {
             .then(function (data) {
                 saveSession(data);
                 localStorage.setItem('expenseai-company', companyName);
+                if (!data.user || !data.user.baseCurrency) {
+                    localStorage.setItem('expenseai-company-currency', detectedCurrency);
+                }
                 showToast('Account created. Company code: ' + companyCode, 'success');
                 setTimeout(function () {
                     redirectByRole(data.user.role);
@@ -505,6 +850,7 @@ function closeExpenseModal() {
     if (placeholder) placeholder.classList.remove('hidden');
     if (preview) preview.classList.add('hidden');
     if (ocr) ocr.classList.add('hidden');
+    currentReceiptUpload = null;
 }
 
 // ==========================================
@@ -547,6 +893,11 @@ function processFile(file) {
 
     var reader = new FileReader();
     reader.onload = function (e) {
+        currentReceiptUpload = {
+            dataUrl: e.target.result,
+            fileName: file.name || 'bill-image'
+        };
+
         var placeholder = document.getElementById('upload-placeholder');
         var preview = document.getElementById('upload-preview');
         var img = document.getElementById('receipt-preview');
@@ -584,16 +935,7 @@ function parseDate(text) {
         return null;
     }
 
-    var value = dateMatch[1];
-    if (/^\d{4}/.test(value)) {
-        return value.replace(/\//g, '-');
-    }
-
-    var parts = value.split(/[\/-]/);
-    var day = parts[0].padStart(2, '0');
-    var month = parts[1].padStart(2, '0');
-    var year = parts[2].length === 2 ? ('20' + parts[2]) : parts[2];
-    return year + '-' + month + '-' + day;
+    return normalizeExpenseDate(dateMatch[1]);
 }
 
 function parseVendor(text) {
@@ -681,44 +1023,12 @@ function extractReceiptWithOCR(imageDataUrl) {
 
 var exchangeRates = null;
 var showOriginalCurrency = false;
+var currentReceiptUpload = null;
 
 function convertCurrency() {
-    var currencySelect = document.getElementById('expense-currency');
-    var amountInput = document.getElementById('expense-amount');
     var convDisplay = document.getElementById('conversion-display');
-    var convText = document.getElementById('conversion-text');
-    var convAmount = document.getElementById('conversion-amount');
-
-    if (!currencySelect || !amountInput || !convDisplay) return;
-
-    var currency = currencySelect.value;
-    var amount = parseFloat(amountInput.value) || 0;
-
-    if (currency === 'INR' || amount === 0) {
-        convDisplay.classList.add('hidden');
-        return;
-    }
-
-    convDisplay.classList.remove('hidden');
-    if (convText) convText.textContent = 'Loading rate...';
-
-    // Fetch exchange rate
-    fetch('https://api.exchangerate-api.com/v4/latest/' + currency)
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            var rate = data.rates.INR || 83;
-            var converted = (amount * rate).toFixed(0);
-            if (convText) convText.textContent = currency + ' ' + amount + ' \u2192';
-            if (convAmount) convAmount.textContent = '\u20B9' + parseInt(converted).toLocaleString('en-IN') + ' (Company Currency)';
-        })
-        .catch(function () {
-            // Fallback rates
-            var fallbackRates = { USD: 83, EUR: 90, GBP: 105 };
-            var rate = fallbackRates[currency] || 83;
-            var converted = (amount * rate).toFixed(0);
-            if (convText) convText.textContent = currency + ' ' + amount + ' \u2192';
-            if (convAmount) convAmount.textContent = '\u20B9' + parseInt(converted).toLocaleString('en-IN') + ' (Company Currency)';
-        });
+    if (!convDisplay) return;
+    convDisplay.classList.add('hidden');
 }
 
 function toggleCurrencyView() {
@@ -773,7 +1083,15 @@ function filterByCategory(category) {
 // SUBMIT EXPENSE
 // ==========================================
 
-function submitExpense() {
+function submitExpense(event) {
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+    }
+
     var titleInput = document.getElementById('expense-vendor');
     var categoryInput = document.getElementById('expense-category');
     var dateInput = document.getElementById('expense-date');
@@ -783,7 +1101,11 @@ function submitExpense() {
 
     var title = normalizeValue(titleInput ? titleInput.value : '');
     var category = normalizeValue(categoryInput ? categoryInput.value : '').toLowerCase();
-    var expenseDate = normalizeValue(dateInput ? dateInput.value : '');
+    var expenseDate = normalizeExpenseDate(dateInput ? dateInput.value : '');
+
+    if (dateInput && expenseDate && dateInput.value !== expenseDate) {
+        dateInput.value = expenseDate;
+    }
     var amount = Number(amountInput ? amountInput.value : 0);
     var currency = normalizeValue(currencyInput ? currencyInput.value : '').toUpperCase();
     var description = normalizeValue(descriptionInput ? descriptionInput.value : '');
@@ -831,7 +1153,9 @@ function submitExpense() {
             category: category,
             expenseDate: expenseDate,
             originalAmount: amount,
-            originalCurrency: currency
+            originalCurrency: currency,
+            receiptDataUrl: currentReceiptUpload && currentReceiptUpload.dataUrl ? currentReceiptUpload.dataUrl : null,
+            receiptFileName: currentReceiptUpload && currentReceiptUpload.fileName ? currentReceiptUpload.fileName : null
         }
     })
         .then(function () {
@@ -848,7 +1172,15 @@ function submitExpense() {
 // MANAGER ACTIONS
 // ==========================================
 
-function approveExpense(id) {
+function approveExpense(id, event) {
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+    }
+
     if (!id || !isFinite(Number(id))) {
         showToast('Invalid expense selected for approval', 'error');
         return;
@@ -857,20 +1189,29 @@ function approveExpense(id) {
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
-            expenseId: expenseId,
+            expenseId: Number(id),
             action: 'approved'
         }
     })
         .then(function () {
             showToast('Expense approved', 'success');
-            loadPendingApprovals();
+            refreshApprovalsForCurrentPage();
+            loadApprovalNotifications();
         })
         .catch(function (err) {
             showToast(err.message, 'error');
         });
 }
 
-function rejectExpense(id) {
+function rejectExpense(id, event) {
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+    }
+
     if (!id || !isFinite(Number(id))) {
         showToast('Invalid expense selected for rejection', 'error');
         return;
@@ -885,14 +1226,15 @@ function rejectExpense(id) {
     apiFetch('/approvals/action', {
         method: 'POST',
         body: {
-            expenseId: expenseId,
+            expenseId: Number(id),
             action: 'rejected',
             comment: normalizeValue(reason)
         }
     })
         .then(function () {
             showToast('Expense rejected', 'success');
-            loadPendingApprovals();
+            refreshApprovalsForCurrentPage();
+            loadApprovalNotifications();
         })
         .catch(function (err) {
             showToast(err.message, 'error');
@@ -902,6 +1244,76 @@ function rejectExpense(id) {
 function toggleComment(id) {
     var el = document.getElementById(id);
     if (el) el.classList.toggle('hidden');
+}
+
+function viewExpenseBill(expenseId, event) {
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+    }
+
+    if (!expenseId || !isFinite(Number(expenseId))) {
+        showToast('Invalid expense selected', 'error');
+        return;
+    }
+
+    apiFetch('/expenses/' + Number(expenseId))
+        .then(function (detail) {
+            var receiptDataUrl = detail && detail.receipt_data_url ? detail.receipt_data_url : '';
+            if (!receiptDataUrl) {
+                showToast('No bill attachment available for this expense', 'info');
+                return;
+            }
+
+            try {
+                var blob = dataUrlToBlob(receiptDataUrl);
+                var objectUrl = URL.createObjectURL(blob);
+                var newTab = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+                if (!newTab) {
+                    showToast('Pop-up blocked. Please allow pop-ups for this site.', 'error');
+                    URL.revokeObjectURL(objectUrl);
+                    return;
+                }
+
+                // Give the new tab time to load the object URL before cleanup.
+                setTimeout(function () {
+                    URL.revokeObjectURL(objectUrl);
+                }, 60 * 1000);
+            } catch (_error) {
+                // Fallback to direct data URL if blob conversion fails.
+                window.open(receiptDataUrl, '_blank', 'noopener,noreferrer');
+            }
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function dataUrlToBlob(dataUrl) {
+    var parts = String(dataUrl || '').split(',');
+    if (parts.length < 2) {
+        throw new Error('Invalid data URL');
+    }
+
+    var meta = parts[0];
+    var base64 = parts.slice(1).join(',');
+    var mimeMatch = meta.match(/^data:([^;]+);base64$/i);
+    if (!mimeMatch) {
+        throw new Error('Unsupported data URL format');
+    }
+
+    var mimeType = mimeMatch[1] || 'application/octet-stream';
+    var binary = atob(base64);
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+
+    return new Blob([bytes], { type: mimeType });
 }
 
 // ==========================================
@@ -937,6 +1349,146 @@ function openUserModal() {
 function closeUserModal() {
     var modal = document.getElementById('user-modal');
     if (modal) modal.classList.remove('active');
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function toRoleBadge(role) {
+    var normalized = String(role || '').toLowerCase();
+    if (normalized === 'manager') return 'badge badge-approved';
+    if (normalized === 'finance') return 'badge badge-pending';
+    if (normalized === 'director') return 'badge badge-rejected';
+    if (normalized === 'admin') return 'badge badge-info';
+    return 'badge badge-info';
+}
+
+function initialsOf(firstName, lastName) {
+    var a = (firstName || '').trim();
+    var b = (lastName || '').trim();
+    var out = '';
+    if (a) out += a.charAt(0).toUpperCase();
+    if (b) out += b.charAt(0).toUpperCase();
+    return out || 'U';
+}
+
+function loadAdminUsers() {
+    var container = document.getElementById('users-grid');
+    if (!container) return;
+
+    apiFetch('/users')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-6"><p style="color: var(--text-secondary);">No users found.</p></div>';
+                return;
+            }
+
+            var byId = {};
+            rows.forEach(function (u) {
+                byId[u.id] = u;
+            });
+
+            var managerSelect = document.getElementById('new-user-manager');
+            if (managerSelect) {
+                var managerOptions = rows
+                    .filter(function (u) {
+                        return ['manager', 'director', 'admin'].indexOf(String(u.role || '').toLowerCase()) !== -1;
+                    })
+                    .map(function (u) {
+                        var fullName = (u.firstName || '') + ' ' + (u.lastName || '');
+                        return '<option value="' + u.id + '">' + escapeHtml(fullName.trim()) + '</option>';
+                    })
+                    .join('');
+                managerSelect.innerHTML = '<option value="">Select Manager</option>' + managerOptions;
+            }
+
+            container.innerHTML = rows.map(function (u) {
+                var fullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim() || 'Unnamed User';
+                var manager = u.managerUserId ? byId[u.managerUserId] : null;
+                var reportsTo = manager ? ((manager.firstName || '') + ' ' + (manager.lastName || '')).trim() : 'Not Assigned';
+                return '<div class="glass-card p-5">' +
+                    '<div class="flex items-start justify-between mb-4">' +
+                    '<div class="flex items-center gap-3">' +
+                    '<div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold">' + initialsOf(u.firstName, u.lastName) + '</div>' +
+                    '<div><p class="text-sm font-bold" style="color: var(--text-primary);">' + escapeHtml(fullName) + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + escapeHtml(u.email || '') + '</p></div>' +
+                    '</div>' +
+                    '<span class="' + toRoleBadge(u.role) + '">' + escapeHtml(String(u.role || '').charAt(0).toUpperCase() + String(u.role || '').slice(1)) + '</span>' +
+                    '</div>' +
+                    '<div class="space-y-2 mb-4">' +
+                    '<div class="flex justify-between text-sm"><span style="color: var(--text-muted);">Reports to:</span><span style="color: var(--text-primary);" class="font-medium">' + escapeHtml(reportsTo) + '</span></div>' +
+                    '<div class="flex justify-between text-sm"><span style="color: var(--text-muted);">Status:</span><span style="color: var(--text-primary);" class="font-medium">' + (u.isActive ? 'Active' : 'Inactive') + '</span></div>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function createUserFromModal() {
+    var nameInput = document.getElementById('new-user-name');
+    var emailInput = document.getElementById('new-user-email');
+    var passwordInput = document.getElementById('new-user-password');
+    var roleInput = document.getElementById('new-user-role');
+    var managerInput = document.getElementById('new-user-manager');
+
+    var fullName = normalizeValue(nameInput ? nameInput.value : '');
+    var email = normalizeEmail(emailInput ? emailInput.value : '');
+    var password = normalizeValue(passwordInput ? passwordInput.value : '');
+    var role = normalizeValue(roleInput ? roleInput.value : '').toLowerCase();
+    var managerUserId = managerInput && managerInput.value ? Number(managerInput.value) : null;
+
+    if (!fullName || !email || !password || !role) {
+        showToast('Please fill in name, email, password, and role', 'error');
+        return;
+    }
+
+    if (!isValidEmail(email)) {
+        showToast('Please enter a valid email address', 'error');
+        return;
+    }
+
+    if (password.length < 8) {
+        showToast('Password must be at least 8 characters long', 'error');
+        return;
+    }
+
+    var parts = fullName.split(/\s+/).filter(Boolean);
+    var firstName = parts[0] || 'User';
+    var lastName = parts.slice(1).join(' ') || 'Member';
+
+    apiFetch('/users', {
+        method: 'POST',
+        body: {
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: password,
+            role: role,
+            managerUserId: managerUserId
+        }
+    })
+        .then(function () {
+            showToast('User created successfully', 'success');
+            closeUserModal();
+            if (nameInput) nameInput.value = '';
+            if (emailInput) emailInput.value = '';
+            if (passwordInput) passwordInput.value = '';
+            if (roleInput) roleInput.value = 'employee';
+            if (managerInput) managerInput.value = '';
+            loadAdminUsers();
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
 }
 
 // ==========================================
@@ -1008,6 +1560,7 @@ function loadEmployeeExpenses() {
             }
 
             container.innerHTML = rows.map(function (row) {
+                var convertedAmount = formatCurrencyAmount(row.converted_amount, getCompanyCurrencyCode(), 2);
                 return '<div class="glass-card p-5 expense-card" data-status="' + row.status + '" data-category="' + row.category + '">' +
                     '<div class="flex items-start justify-between mb-4">' +
                     '<div><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.title + '</p>' +
@@ -1015,9 +1568,8 @@ function loadEmployeeExpenses() {
                     '<span class="' + statusBadgeClass(row.status) + '">' + row.status + '</span></div>' +
                     '<p class="text-xs mb-3" style="color: var(--text-secondary);">' + (row.description || '') + '</p>' +
                     '<div class="flex items-end justify-between"><div>' +
-                    '<p class="text-xs" style="color: var(--text-muted);">Converted Amount</p>' +
-                    '<p class="text-xl font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p>' +
-                    '<p class="text-xs" style="color: var(--text-muted);">' + row.original_currency + ' ' + Number(row.original_amount).toFixed(2) + ' at rate ' + Number(row.exchange_rate).toFixed(4) + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Amount</p>' +
+                    '<p class="text-xl font-bold text-indigo-400">' + convertedAmount + '</p>' +
                     '</div><div class="text-right"><p class="text-xs" style="color: var(--text-muted);">Category</p>' +
                     '<p class="text-sm font-medium" style="color: var(--text-secondary);">' + row.category + '</p></div></div></div>';
             }).join('');
@@ -1039,16 +1591,576 @@ function loadPendingApprovals() {
             }
 
             container.innerHTML = rows.map(function (row) {
+                var submittedAt = row.submitted_at ? new Date(row.submitted_at).toLocaleString() : 'N/A';
+                var convertedAmount = formatCurrencyAmount(row.converted_amount, getCompanyCurrencyCode(), 2);
+                var receiptLabel = row.has_receipt ? ('Bill attached: ' + escapeHtml(row.receipt_file_name || 'Receipt image')) : 'No bill attached';
                 return '<div class="glass-card p-6">' +
                     '<div class="flex flex-col lg:flex-row lg:items-center gap-5">' +
                     '<div class="flex-1"><p class="text-sm font-bold" style="color: var(--text-primary);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + '</p>' +
                     '<p class="text-xs" style="color: var(--text-secondary);">' + row.title + ' | ' + row.category + '</p>' +
-                    '<p class="text-xs" style="color: var(--text-muted);">Workflow: ' + row.workflowName + ' | Step ' + (row.currentStepOrder || '-') + '</p></div>' +
-                    '<div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-bold text-indigo-400">' + Number(row.converted_amount).toFixed(2) + '</p></div>' +
-                    '<button onclick="approveExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>' +
-                    '<button onclick="rejectExpense(' + row.id + ')" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button></div>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Workflow: ' + row.workflowName + ' | Step ' + (row.currentStepOrder || '-') + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Submitted: ' + submittedAt + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + receiptLabel + '</p></div>' +
+                        '<div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-bold text-indigo-400">' + convertedAmount + '</p></div>' +
+                    (row.has_receipt ? '<button type="button" onclick="viewExpenseBill(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-sm font-semibold hover:bg-blue-500/30 transition-all border border-blue-500/20">View Bill</button>' : '') +
+                    '<button type="button" onclick="approveExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>' +
+                    '<button type="button" onclick="rejectExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button></div>' +
                     '</div></div>';
             }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+
+    loadManagerTimeline();
+}
+
+function loadManagerTimeline() {
+    var container = document.getElementById('approval-timeline-list');
+    if (!container) return;
+
+    apiFetch('/expenses')
+        .then(function (rows) {
+            var recent = rows.slice(0, 6);
+            if (!recent.length) {
+                container.innerHTML = '<p class="text-sm" style="color: var(--text-secondary);">No timeline events yet.</p>';
+                return;
+            }
+
+            return Promise.all(recent.map(function (row) {
+                return apiFetch('/expenses/' + row.id);
+            })).then(function (details) {
+                var events = [];
+
+                details.forEach(function (detail) {
+                    events.push({
+                        ts: detail.submitted_at,
+                        text: detail.title + ' submitted',
+                        amount: Number(detail.converted_amount || 0),
+                        type: 'submitted'
+                    });
+
+                    var approvals = detail.approvalSummary && detail.approvalSummary.approvals
+                        ? detail.approvalSummary.approvals
+                        : [];
+                    approvals.forEach(function (a) {
+                        var name = ((a.approver_first_name || '') + ' ' + (a.approver_last_name || '')).trim() || 'Approver';
+                        events.push({
+                            ts: a.acted_at,
+                            text: name + ' ' + String(a.action || '').toLowerCase() + ' ' + detail.title,
+                            amount: Number(detail.converted_amount || 0),
+                            type: String(a.action || '').toLowerCase()
+                        });
+                    });
+                });
+
+                events = events
+                    .filter(function (e) { return e.ts; })
+                    .sort(function (a, b) { return new Date(b.ts).getTime() - new Date(a.ts).getTime(); })
+                    .slice(0, 8);
+
+                container.innerHTML = '<div class="space-y-0">' + events.map(function (event) {
+                    var amountText = formatCurrencyAmount(event.amount || 0, getCompanyCurrencyCode(), 0);
+                    var textClass = event.type === 'approved' ? 'text-green-400' : (event.type === 'rejected' ? 'text-red-400' : '');
+                    return '<div class="timeline-item">' +
+                        '<div class="timeline-dot completed"></div>' +
+                        '<div class="flex items-center gap-2 mb-1">' +
+                        '<p class="text-sm font-medium ' + textClass + '" style="color: var(--text-primary);">' + event.text + '</p>' +
+                        '<span class="badge badge-info text-xs">' + amountText + '</span>' +
+                        '</div>' +
+                        '<p class="text-xs" style="color: var(--text-muted);">' + new Date(event.ts).toLocaleString() + '</p>' +
+                        '</div>';
+                }).join('') + '</div>';
+            });
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function renderApprovalDates(approvals) {
+    if (!approvals || !approvals.length) {
+        return '<p class="text-xs" style="color: var(--text-muted);">No approval actions recorded yet.</p>';
+    }
+
+    var ordered = approvals.slice().sort(function (a, b) {
+        return new Date(a.acted_at).getTime() - new Date(b.acted_at).getTime();
+    });
+
+    return ordered.map(function (item) {
+        var role = String(item.approver_role || '').toLowerCase();
+        var name = ((item.approver_first_name || '') + ' ' + (item.approver_last_name || '')).trim() || 'Approver';
+        var actedAt = item.acted_at ? new Date(item.acted_at).toLocaleString() : 'N/A';
+        return '<p class="text-xs" style="color: var(--text-muted);">' +
+            role.charAt(0).toUpperCase() + role.slice(1) +
+            ' (' + name + '): ' + String(item.action || '').toUpperCase() + ' on ' + actedAt +
+            '</p>';
+    }).join('');
+}
+
+function loadFinanceApprovals() {
+    var container = document.getElementById('finance-approvals-list');
+    if (!container) return;
+
+    apiFetch('/approvals/pending')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-5"><p style="color: var(--text-secondary);">No manager-approved items waiting for finance.</p></div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(function (row) {
+                var convertedAmount = formatCurrencyAmount(row.converted_amount, getCompanyCurrencyCode(), 2);
+                var receiptLabel = row.has_receipt ? ('Bill attached: ' + escapeHtml(row.receipt_file_name || 'Receipt image')) : 'No bill attached';
+                return '<div class="glass-card p-6">' +
+                    '<div class="flex flex-col lg:flex-row lg:items-center gap-4">' +
+                    '<div class="flex-1">' +
+                    '<p class="text-sm font-bold" style="color: var(--text-primary);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-secondary);">' + row.title + ' | ' + row.category + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Submitted: ' + (row.submitted_at ? new Date(row.submitted_at).toLocaleString() : 'N/A') + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">Current Step: ' + (row.currentStepOrder || '-') + '</p>' +
+                    '<p class="text-xs" style="color: var(--text-muted);">' + receiptLabel + '</p>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2">' +
+                    '<p class="text-lg font-bold text-indigo-400">' + convertedAmount + '</p>' +
+                    (row.has_receipt ? '<button type="button" onclick="viewExpenseBill(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-sm font-semibold hover:bg-blue-500/30 transition-all border border-blue-500/20">View Bill</button>' : '') +
+                    '<button type="button" onclick="approveExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Approve</button>' +
+                    '<button type="button" onclick="rejectExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+function loadDirectorExpenses() {
+    var container = document.getElementById('director-expenses-list');
+    if (!container) return;
+
+    apiFetch('/approvals/pending')
+        .then(function (rows) {
+            if (!rows.length) {
+                container.innerHTML = '<div class="glass-card p-5"><p style="color: var(--text-secondary);">No pending expenses for director final approval.</p></div>';
+                return;
+            }
+
+            return Promise.all(rows.map(function (row) {
+                return apiFetch('/expenses/' + row.id).then(function (detail) {
+                    return {
+                        row: row,
+                        detail: detail
+                    };
+                });
+            })).then(function (items) {
+                container.innerHTML = items.map(function (item) {
+                    var row = item.row;
+                    var approvals = item.detail && item.detail.approvalSummary ? item.detail.approvalSummary.approvals : [];
+                    var convertedAmount = formatCurrencyAmount(row.converted_amount, getCompanyCurrencyCode(), 2);
+                    var receiptLabel = row.has_receipt ? ('Bill attached: ' + escapeHtml(row.receipt_file_name || 'Receipt image')) : 'No bill attached';
+                    return '<div class="glass-card p-6 mb-4">' +
+                        '<div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-3">' +
+                        '<div class="flex-1">' +
+                        '<p class="text-sm font-bold" style="color: var(--text-primary);">' + row.submitted_by_first_name + ' ' + row.submitted_by_last_name + '</p>' +
+                        '<p class="text-xs" style="color: var(--text-secondary);">' + row.title + ' | ' + row.category + '</p>' +
+                        '<p class="text-xs" style="color: var(--text-muted);">Submitted: ' + (row.submitted_at ? new Date(row.submitted_at).toLocaleString() : 'N/A') + '</p>' +
+                        '<p class="text-xs" style="color: var(--text-muted);">' + receiptLabel + '</p>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-2">' +
+                        '<p class="text-lg font-bold text-indigo-400">' + convertedAmount + '</p>' +
+                        (row.has_receipt ? '<button type="button" onclick="viewExpenseBill(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-blue-500/20 text-blue-400 text-sm font-semibold hover:bg-blue-500/30 transition-all border border-blue-500/20">View Bill</button>' : '') +
+                        '<button type="button" onclick="approveExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-green-500/20 text-green-400 text-sm font-semibold hover:bg-green-500/30 transition-all border border-green-500/20">Final Approve</button>' +
+                        '<button type="button" onclick="rejectExpense(' + row.id + ', event)" class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/30 transition-all border border-red-500/20">Reject</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="pt-3 border-t" style="border-color: var(--glass-border);">' +
+                        '<p class="text-xs font-semibold mb-2" style="color: var(--text-secondary);">Approval Timeline</p>' +
+                        renderApprovalDates(approvals) +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+            });
+        })
+        .catch(function (err) {
+            showToast(err.message, 'error');
+        });
+}
+
+var dashboardRange = 'monthly';
+
+function setDashboardRange(range) {
+    var normalized = String(range || '').toLowerCase();
+    if (['monthly', 'weekly', 'yearly'].indexOf(normalized) === -1) {
+        return;
+    }
+
+    dashboardRange = normalized;
+    loadDashboardAnalytics();
+}
+
+function parseExpenseDateForDashboard(row) {
+    if (row && row.expense_date) {
+        return new Date(String(row.expense_date) + 'T00:00:00Z');
+    }
+    if (row && row.submitted_at) {
+        return new Date(row.submitted_at);
+    }
+    return null;
+}
+
+function getWeekStartUtc(date) {
+    var d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    var day = d.getUTCDay();
+    var offset = day === 0 ? -6 : (1 - day);
+    d.setUTCDate(d.getUTCDate() + offset);
+    return d;
+}
+
+function buildDashboardSeries(rows, range) {
+    var labels = [];
+    var values = [];
+    var keyIndex = {};
+    var now = new Date();
+
+    if (range === 'weekly') {
+        var weekStartNow = getWeekStartUtc(now);
+        for (var wi = 11; wi >= 0; wi--) {
+            var start = new Date(weekStartNow);
+            start.setUTCDate(start.getUTCDate() - (wi * 7));
+            var key = start.toISOString().slice(0, 10);
+            labels.push(start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            values.push(0);
+            keyIndex[key] = labels.length - 1;
+        }
+
+        rows.forEach(function (row) {
+            var dt = parseExpenseDateForDashboard(row);
+            if (!dt || Number.isNaN(dt.getTime())) return;
+            var bucket = getWeekStartUtc(dt).toISOString().slice(0, 10);
+            var idx = keyIndex[bucket];
+            if (idx === undefined) return;
+            values[idx] += Number(row.converted_amount) || 0;
+        });
+
+        return { labels: labels, values: values };
+    }
+
+    if (range === 'yearly') {
+        var currentYear = now.getUTCFullYear();
+        for (var yi = 11; yi >= 0; yi--) {
+            var year = currentYear - yi;
+            labels.push(String(year));
+            values.push(0);
+            keyIndex[String(year)] = labels.length - 1;
+        }
+
+        rows.forEach(function (row) {
+            var dt = parseExpenseDateForDashboard(row);
+            if (!dt || Number.isNaN(dt.getTime())) return;
+            var y = String(dt.getUTCFullYear());
+            var yIdx = keyIndex[y];
+            if (yIdx === undefined) return;
+            values[yIdx] += Number(row.converted_amount) || 0;
+        });
+
+        return { labels: labels, values: values };
+    }
+
+    for (var mi = 0; mi < 12; mi++) {
+        labels.push(new Date(Date.UTC(now.getUTCFullYear(), mi, 1)).toLocaleDateString('en-US', { month: 'short' }));
+        values.push(0);
+    }
+
+    var currentYearForMonths = now.getUTCFullYear();
+    rows.forEach(function (row) {
+        var dt = parseExpenseDateForDashboard(row);
+        if (!dt || Number.isNaN(dt.getTime())) return;
+        if (dt.getUTCFullYear() !== currentYearForMonths) return;
+        var month = dt.getUTCMonth();
+        if (month >= 0 && month < 12) {
+            values[month] += Number(row.converted_amount) || 0;
+        }
+    });
+
+    return { labels: labels, values: values };
+}
+
+function loadDashboardAnalytics() {
+    var page = getCurrentPage('dashboard.html');
+    if (page !== 'dashboard.html') return;
+
+    Promise.all([
+        apiFetch('/expenses'),
+        apiFetch('/approvals/pending').catch(function () { return []; })
+    ])
+        .then(function (results) {
+            var rows = Array.isArray(results[0]) ? results[0] : [];
+            var pendingApprovals = Array.isArray(results[1]) ? results[1] : [];
+
+            var totals = {
+                total: 0,
+                approved: 0,
+                rejected: 0,
+                pending: 0,
+                approvedCount: 0,
+                rejectedCount: 0,
+                pendingCount: 0
+            };
+
+            var categoryTotals = {};
+            rows.forEach(function (row) {
+                var amount = Number(row.converted_amount) || 0;
+                var status = String(row.status || '').toLowerCase();
+                var category = String(row.category || 'other').toLowerCase();
+
+                totals.total += amount;
+                if (status === 'approved') {
+                    totals.approved += amount;
+                    totals.approvedCount += 1;
+                } else if (status === 'rejected') {
+                    totals.rejected += amount;
+                    totals.rejectedCount += 1;
+                } else {
+                    totals.pending += amount;
+                    totals.pendingCount += 1;
+                }
+
+                categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+            });
+
+            var companyCurrency = getCompanyCurrencyCode();
+            var dashCurrency = document.getElementById('dash-currency');
+            if (dashCurrency) {
+                dashCurrency.textContent = companyCurrency + ' (' + getCurrencySymbol(companyCurrency).trim() + ')';
+            }
+
+            var statCards = document.querySelectorAll('.stat-card');
+            var totalCount = rows.length;
+            var totalAmount = Math.max(totals.total, 0.0001);
+            var cardData = [
+                { amount: totals.total, countText: totalCount + ' items', ratio: 1 },
+                { amount: totals.pending, countText: totals.pendingCount + ' items', ratio: totals.pending / totalAmount },
+                { amount: totals.approved, countText: totals.approvedCount + ' items', ratio: totals.approved / totalAmount },
+                { amount: totals.rejected, countText: totals.rejectedCount + ' items', ratio: totals.rejected / totalAmount }
+            ];
+
+            statCards.forEach(function (card, index) {
+                if (!cardData[index]) return;
+                var valueEl = card.querySelector('.text-2xl.font-bold');
+                var badgeEl = card.querySelector('.badge');
+                var progressEl = card.querySelector('.h-full');
+
+                if (valueEl) {
+                    valueEl.textContent = formatCurrencyAmount(cardData[index].amount, companyCurrency, 0);
+                }
+                if (badgeEl) {
+                    badgeEl.textContent = cardData[index].countText;
+                }
+                if (progressEl) {
+                    var width = index === 0 ? 100 : Math.max(4, Math.min(100, Math.round(cardData[index].ratio * 100)));
+                    progressEl.style.width = width + '%';
+                }
+            });
+
+            var rangeButtons = ['monthly', 'weekly', 'yearly'];
+            rangeButtons.forEach(function (name) {
+                var btn = document.getElementById('dashboard-range-' + name);
+                if (!btn) return;
+                if (name === dashboardRange) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/20';
+                    btn.style.color = '';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors';
+                    btn.style.color = 'var(--text-muted)';
+                }
+            });
+
+            var series = buildDashboardSeries(rows, dashboardRange);
+            var barGroups = document.querySelectorAll('.xl\\:col-span-2 .flex.items-end.gap-3.h-48 > div');
+            var maxVal = Math.max.apply(null, series.values.concat([1]));
+            barGroups.forEach(function (group, index) {
+                if (index >= series.values.length) return;
+                var bar = group.querySelector('div');
+                var label = group.querySelector('span');
+                var value = Number(series.values[index]) || 0;
+                var percent = value <= 0 ? 4 : Math.max(8, Math.round((value / maxVal) * 100));
+                if (bar) {
+                    bar.style.height = percent + '%';
+                    bar.title = formatCurrencyAmount(value, companyCurrency, 0);
+                }
+                if (label) {
+                    label.textContent = series.labels[index] || '';
+                }
+            });
+
+            var categoryMeta = {
+                food: { label: 'Food & Dining', icon: '🍽️', text: 'text-indigo-400', gradient: 'from-indigo-500 to-violet-500' },
+                travel: { label: 'Travel', icon: '✈️', text: 'text-violet-400', gradient: 'from-violet-500 to-purple-500' },
+                accommodation: { label: 'Accommodation', icon: '🏨', text: 'text-purple-400', gradient: 'from-purple-500 to-pink-500' },
+                transport: { label: 'Transportation', icon: '🚗', text: 'text-pink-400', gradient: 'from-pink-500 to-rose-500' },
+                supplies: { label: 'Supplies', icon: '📦', text: 'text-cyan-400', gradient: 'from-cyan-500 to-blue-500' },
+                other: { label: 'Other', icon: '🧾', text: 'text-blue-400', gradient: 'from-blue-500 to-indigo-500' }
+            };
+
+            var categoryList = document.getElementById('dashboard-category-list');
+            if (categoryList) {
+                var categoryEntries = Object.keys(categoryTotals)
+                    .map(function (key) {
+                        return { key: key, amount: Number(categoryTotals[key]) || 0 };
+                    })
+                    .sort(function (a, b) { return b.amount - a.amount; });
+
+                if (!categoryEntries.length) {
+                    categoryList.innerHTML = '<p class="text-sm" style="color: var(--text-secondary);">No category data yet.</p>';
+                } else {
+                    var maxCategory = categoryEntries[0].amount || 1;
+                    categoryList.innerHTML = categoryEntries.map(function (entry) {
+                        var meta = categoryMeta[entry.key] || categoryMeta.other;
+                        var width = Math.max(8, Math.round((entry.amount / maxCategory) * 100));
+                        return '<div>' +
+                            '<div class="flex justify-between mb-1.5">' +
+                            '<span class="text-sm font-medium" style="color: var(--text-primary);">' + meta.icon + ' ' + escapeHtml(meta.label) + '</span>' +
+                            '<span class="text-sm font-bold ' + meta.text + '">' + formatCurrencyAmount(entry.amount, companyCurrency, 0) + '</span>' +
+                            '</div>' +
+                            '<div class="h-2 rounded-full bg-white/5 overflow-hidden">' +
+                            '<div class="h-full rounded-full bg-gradient-to-r ' + meta.gradient + '" style="width: ' + width + '%;"></div>' +
+                            '</div>' +
+                            '</div>';
+                    }).join('');
+                }
+            }
+
+            var recentContainer = document.getElementById('dashboard-recent-expenses-list');
+            if (recentContainer) {
+                var recent = rows.slice().sort(function (a, b) {
+                    return new Date(b.submitted_at || b.created_at || 0).getTime() - new Date(a.submitted_at || a.created_at || 0).getTime();
+                }).slice(0, 6);
+
+                if (!recent.length) {
+                    recentContainer.innerHTML = '<p class="text-sm" style="color: var(--text-secondary);">No expenses yet.</p>';
+                } else {
+                    recentContainer.innerHTML = recent.map(function (row) {
+                        var meta = categoryMeta[String(row.category || '').toLowerCase()] || categoryMeta.other;
+                        var status = String(row.status || 'pending').toLowerCase();
+                        var submittedDate = row.submitted_at
+                            ? new Date(row.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : 'N/A';
+                        var title = row.title || 'Expense';
+                        return '<div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all">' +
+                            '<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center text-lg flex-shrink-0">' + meta.icon + '</div>' +
+                            '<div class="flex-1 min-w-0">' +
+                            '<p class="text-sm font-semibold truncate" style="color: var(--text-primary);">' + escapeHtml(title) + '</p>' +
+                            '<p class="text-xs" style="color: var(--text-muted);">' + submittedDate + ' • ' + escapeHtml(meta.label) + '</p>' +
+                            '</div>' +
+                            '<div class="text-right flex-shrink-0">' +
+                            '<p class="text-sm font-bold" style="color: var(--text-primary);">' + formatCurrencyAmount(row.converted_amount || 0, companyCurrency, 0) + '</p>' +
+                            '<span class="' + statusBadgeClass(status) + ' text-xs">' + escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span>' +
+                            '</div>' +
+                            '</div>';
+                    }).join('');
+                }
+            }
+
+            var pendingStepCounts = { 1: 0, 2: 0, 3: 0 };
+            rows.forEach(function (row) {
+                if (String(row.status || '').toLowerCase() !== 'pending') return;
+                var step = Number(row.current_step_order) || 0;
+                if (pendingStepCounts[step] !== undefined) {
+                    pendingStepCounts[step] += 1;
+                }
+            });
+
+            var doneCount = totals.approvedCount + totals.rejectedCount;
+            var stepper = document.getElementById('dashboard-stepper');
+            if (stepper) {
+                var hasData = rows.length > 0;
+                var activeStage = 0;
+                if (!hasData) {
+                    activeStage = 0;
+                } else if (pendingStepCounts[1] > 0) {
+                    activeStage = 1;
+                } else if (pendingStepCounts[2] > 0) {
+                    activeStage = 2;
+                } else if (pendingStepCounts[3] > 0) {
+                    activeStage = 3;
+                } else {
+                    activeStage = 4;
+                }
+
+                function stepClass(idx) {
+                    if (!hasData) return 'pending';
+                    if (idx < activeStage || activeStage === 4) return 'completed';
+                    if (idx === activeStage) return 'active';
+                    return 'pending';
+                }
+
+                function lineClass(idx) {
+                    if (!hasData) return 'stepper-line';
+                    if (idx < activeStage || activeStage === 4) return 'stepper-line completed';
+                    return 'stepper-line';
+                }
+
+                stepper.innerHTML =
+                    '<div class="stepper-step"><div class="stepper-circle ' + stepClass(0) + '"><span>' + rows.length + '</span></div><p class="stepper-label">Submitted</p></div>' +
+                    '<div class="' + lineClass(0) + '"></div>' +
+                    '<div class="stepper-step"><div class="stepper-circle ' + stepClass(1) + '"><span>' + pendingStepCounts[1] + '</span></div><p class="stepper-label">Manager</p></div>' +
+                    '<div class="' + lineClass(1) + '"></div>' +
+                    '<div class="stepper-step"><div class="stepper-circle ' + stepClass(2) + '"><span>' + pendingStepCounts[2] + '</span></div><p class="stepper-label">Finance</p></div>' +
+                    '<div class="' + lineClass(2) + '"></div>' +
+                    '<div class="stepper-step"><div class="stepper-circle ' + stepClass(3) + '"><span>' + pendingStepCounts[3] + '</span></div><p class="stepper-label">Director</p></div>' +
+                    '<div class="' + lineClass(3) + '"></div>' +
+                    '<div class="stepper-step"><div class="stepper-circle ' + stepClass(4) + '"><span>' + doneCount + '</span></div><p class="stepper-label">Done</p></div>';
+            }
+
+            var timeline = document.getElementById('dashboard-flow-timeline');
+            if (timeline) {
+                var timelineEvents = [];
+
+                rows.forEach(function (row) {
+                    if (row.submitted_at) {
+                        timelineEvents.push({
+                            ts: row.submitted_at,
+                            text: (row.title || 'Expense') + ' submitted by ' + ((row.submitted_by_first_name || '') + ' ' + (row.submitted_by_last_name || '')).trim(),
+                            completed: true
+                        });
+                    }
+
+                    if (row.resolved_at && (row.status === 'approved' || row.status === 'rejected')) {
+                        timelineEvents.push({
+                            ts: row.resolved_at,
+                            text: (row.title || 'Expense') + ' ' + String(row.status).toLowerCase(),
+                            completed: true
+                        });
+                    }
+                });
+
+                pendingApprovals.slice(0, 3).forEach(function (row) {
+                    timelineEvents.push({
+                        ts: row.submitted_at,
+                        text: 'Awaiting step ' + (row.currentStepOrder || '-') + ' review: ' + (row.title || 'Expense'),
+                        completed: false
+                    });
+                });
+
+                timelineEvents = timelineEvents
+                    .filter(function (event) { return event.ts; })
+                    .sort(function (a, b) { return new Date(b.ts).getTime() - new Date(a.ts).getTime(); })
+                    .slice(0, 6);
+
+                if (!timelineEvents.length) {
+                    timeline.innerHTML = '<p class="text-sm" style="color: var(--text-secondary);">No approval flow events yet.</p>';
+                } else {
+                    timeline.innerHTML = timelineEvents.map(function (event) {
+                        return '<div class="timeline-item">' +
+                            '<div class="timeline-dot' + (event.completed ? ' completed' : '') + '"></div>' +
+                            '<p class="text-sm font-medium" style="color: var(--text-primary);">' + escapeHtml(event.text) + '</p>' +
+                            '<p class="text-xs" style="color: var(--text-muted);">' + new Date(event.ts).toLocaleString() + '</p>' +
+                            '</div>';
+                    }).join('');
+                }
+            }
         })
         .catch(function (err) {
             showToast(err.message, 'error');

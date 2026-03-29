@@ -3,7 +3,6 @@ const HttpError = require('../utils/httpError');
 const expenseModel = require('../models/expenseModel');
 const approvalModel = require('../models/approvalModel');
 const workflowModel = require('../models/workflowModel');
-const userModel = require('../models/userModel');
 const ruleEngineService = require('./ruleEngineService');
 const auditService = require('./auditService');
 const { normalizeString, isPositiveInteger } = require('../utils/validation');
@@ -21,15 +20,11 @@ function groupBy(items, keyGetter) {
 }
 
 function findActionStepId(context, userId, role) {
-  const mode = context.workflow.approval_mode;
-
-  if (role === 'admin' || role === 'director') {
-    if (context.firstPendingStep) {
-      return context.firstPendingStep.step.id;
-    }
-
-    return context.steps[0] ? context.steps[0].id : null;
+  if (role === 'admin') {
+    return null;
   }
+
+  const mode = context.workflow.approval_mode;
 
   if (mode === 'SPECIFIC_OVERRIDE' && context.workflow.override_approver_user_id === userId) {
     if (context.firstPendingStep) {
@@ -158,12 +153,9 @@ async function listPendingForApprover(auth) {
     return [];
   }
 
-  let scopedPendingExpenses = pendingExpenses;
-  if (auth.role === 'manager') {
-    const managedUserIds = await userModel.getManagedUserIds(auth.companyId, auth.userId, null);
-    const visibleSubmitters = new Set([auth.userId, ...managedUserIds]);
-    scopedPendingExpenses = pendingExpenses.filter((expense) => visibleSubmitters.has(expense.submitted_by_user_id));
-  }
+  // Visibility is driven by workflow step assignment instead of submitter hierarchy.
+  // This avoids hiding valid step actions when users are not mapped under manager_user_id.
+  const scopedPendingExpenses = pendingExpenses;
 
   const expenseIds = scopedPendingExpenses.map((item) => item.id);
   if (!expenseIds.length) {

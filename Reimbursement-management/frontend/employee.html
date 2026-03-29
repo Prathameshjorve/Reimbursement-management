@@ -6,8 +6,7 @@
     <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
     <title>My Expenses — AIimburse</title>
     <link rel="stylesheet" href="./style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+    <link rel="stylesheet" href="./tailwind.css">
 </head>
 <body>
     <!-- Sidebar -->
@@ -311,8 +310,8 @@
             </div>
 
             <div class="flex gap-3">
-                <button onclick="closeExpenseModal()" class="btn-ghost flex-1">Cancel</button>
-                <button onclick="submitExpense()" class="btn-gradient flex-1">Submit Expense</button>
+                <button type="button" onclick="closeExpenseModal()" class="btn-ghost flex-1">Cancel</button>
+                <button type="button" onclick="submitExpense(event)" class="btn-gradient flex-1">Submit Expense</button>
             </div>
         </div>
     </div>

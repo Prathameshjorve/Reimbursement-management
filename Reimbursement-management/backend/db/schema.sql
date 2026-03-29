@@ -19,6 +19,8 @@ CREATE TABLE users (
   company_id BIGINT UNSIGNED NOT NULL,
   email VARCHAR(191) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  google_id VARCHAR(191) NULL,
+  auth_provider ENUM('local', 'google') NOT NULL DEFAULT 'local',
   first_name VARCHAR(80) NOT NULL,
   last_name VARCHAR(80) NOT NULL,
   role ENUM('admin', 'manager', 'employee', 'finance', 'director') NOT NULL,
@@ -28,6 +30,7 @@ CREATE TABLE users (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT uq_users_company_email UNIQUE (company_id, email),
+  CONSTRAINT uq_users_company_google UNIQUE (company_id, google_id),
   CONSTRAINT fk_users_company FOREIGN KEY (company_id) REFERENCES companies(id) ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_users_manager FOREIGN KEY (manager_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -99,6 +102,8 @@ CREATE TABLE expenses (
   workflow_id BIGINT UNSIGNED NOT NULL,
   title VARCHAR(150) NOT NULL,
   description TEXT NULL,
+  receipt_data_url LONGTEXT NULL,
+  receipt_file_name VARCHAR(255) NULL,
   category ENUM('travel', 'food', 'accommodation', 'transport', 'supplies', 'other') NOT NULL,
   expense_date DATE NOT NULL,
   original_amount DECIMAL(14,2) NOT NULL,

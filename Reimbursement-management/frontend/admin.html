@@ -6,8 +6,7 @@
     <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
     <title>Admin Panel — ExpenseAI</title>
     <link rel="stylesheet" href="./style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+    <link rel="stylesheet" href="./tailwind.css">
 </head>
 <body>
     <!-- Sidebar -->
@@ -63,167 +62,7 @@
 
         <!-- Users Section -->
         <div id="section-users">
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
-                <!-- User Card 1 -->
-                <div class="glass-card p-5">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold">JD</div>
-                            <div>
-                                <p class="text-sm font-bold" style="color: var(--text-primary);">John Doe</p>
-                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7a101512143a0e1f19121915080a54191517">[email&#160;protected]</a></p>
-                            </div>
-                        </div>
-                        <span class="badge badge-info">Employee</span>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Reports to:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Total Claims:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">&#8377;87,500</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Pending:</span>
-                            <span class="text-yellow-400 font-medium">3</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
-                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
-                    </div>
-                </div>
-
-                <!-- User Card 2 -->
-                <div class="glass-card p-5">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold">SK</div>
-                            <div>
-                                <p class="text-sm font-bold" style="color: var(--text-primary);">Sarah Kim</p>
-                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b6c5d7c4d7def6c2d3d5ded5d9c4c698d5d9db">[email&#160;protected]</a></p>
-                            </div>
-                        </div>
-                        <span class="badge badge-approved">Manager</span>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Reports to:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Mike Chen (Director)</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Team Size:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">5 members</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Pending Reviews:</span>
-                            <span class="text-yellow-400 font-medium">5</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
-                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
-                    </div>
-                </div>
-
-                <!-- User Card 3 -->
-                <div class="glass-card p-5">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white font-bold">AP</div>
-                            <div>
-                                <p class="text-sm font-bold" style="color: var(--text-primary);">Alice Park</p>
-                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0c6d60656f694c78696f646f637e7c226f6361">[email&#160;protected]</a></p>
-                            </div>
-                        </div>
-                        <span class="badge badge-info">Employee</span>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Reports to:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Total Claims:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">&#8377;1,23,000</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Pending:</span>
-                            <span class="text-yellow-400 font-medium">1</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
-                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
-                    </div>
-                </div>
-
-                <!-- User Card 4 -->
-                <div class="glass-card p-5">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">MC</div>
-                            <div>
-                                <p class="text-sm font-bold" style="color: var(--text-primary);">Mike Chen</p>
-                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="593430323c192d3c3a313a362b29773a3634">[email&#160;protected]</a></p>
-                            </div>
-                        </div>
-                        <span class="badge badge-pending">Finance</span>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Role:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Finance Director</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Approval Level:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Level 3</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Pending Reviews:</span>
-                            <span class="text-yellow-400 font-medium">2</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
-                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
-                    </div>
-                </div>
-
-                <!-- User Card 5 -->
-                <div class="glass-card p-5">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold">RK</div>
-                            <div>
-                                <p class="text-sm font-bold" style="color: var(--text-primary);">Raj Kumar</p>
-                                <p class="text-xs" style="color: var(--text-muted);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="addfccc7edd9c8cec5cec2dfdd83cec2c0">[email&#160;protected]</a></p>
-                            </div>
-                        </div>
-                        <span class="badge badge-info">Employee</span>
-                    </div>
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Reports to:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">Sarah Kim</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Total Claims:</span>
-                            <span style="color: var(--text-primary);" class="font-medium">&#8377;45,800</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span style="color: var(--text-muted);">Pending:</span>
-                            <span class="text-yellow-400 font-medium">1</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost flex-1 text-xs py-2">Edit Role</button>
-                        <button class="btn-ghost flex-1 text-xs py-2 text-red-400 border-red-500/20 hover:bg-red-500/10">Remove</button>
-                    </div>
-                </div>
-            </div>
+            <div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children"></div>
         </div>
 
         <!-- All Expenses Section -->
@@ -426,29 +265,29 @@
                 <button onclick="closeUserModal()" class="p-2 rounded-xl hover:bg-white/10 transition-all"><svg class="w-5 h-5" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
             <div class="space-y-4 mb-6">
-                <div class="float-label-group"><input type="text" class="input-glass" placeholder=" "><label>Full Name</label></div>
-                <div class="float-label-group"><input type="email" class="input-glass" placeholder=" "><label>Email Address</label></div>
+                <div class="float-label-group"><input id="new-user-name" type="text" class="input-glass" placeholder=" "><label>Full Name</label></div>
+                <div class="float-label-group"><input id="new-user-email" type="email" class="input-glass" placeholder=" "><label>Email Address</label></div>
+                <div class="float-label-group"><input id="new-user-password" type="password" class="input-glass" placeholder=" "><label>Temporary Password</label></div>
                 <div class="float-label-group">
-                    <select class="input-glass">
+                    <select id="new-user-role" class="input-glass">
                         <option value="employee">Employee</option>
                         <option value="manager">Manager</option>
                         <option value="finance">Finance</option>
+                        <option value="director">Director</option>
                         <option value="admin">Admin</option>
                     </select>
                     <label>Role</label>
                 </div>
                 <div class="float-label-group">
-                    <select class="input-glass">
+                    <select id="new-user-manager" class="input-glass">
                         <option value="">Select Manager</option>
-                        <option value="sarah">Sarah Kim</option>
-                        <option value="mike">Mike Chen</option>
                     </select>
                     <label>Reports To</label>
                 </div>
             </div>
             <div class="flex gap-3">
                 <button onclick="closeUserModal()" class="btn-ghost flex-1">Cancel</button>
-                <button onclick="closeUserModal()" class="btn-gradient flex-1">Create User</button>
+                <button onclick="createUserFromModal()" class="btn-gradient flex-1">Create User</button>
             </div>
         </div>
     </div>

@@ -4,12 +4,14 @@ async function createUser(data, connection) {
   const result = await execute(
     connection,
     `INSERT INTO users
-     (company_id, email, password_hash, first_name, last_name, role, manager_user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     (company_id, email, password_hash, google_id, auth_provider, first_name, last_name, role, manager_user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.companyId,
       data.email,
       data.passwordHash,
+      data.googleId || null,
+      data.authProvider || 'local',
       data.firstName,
       data.lastName,
       data.role,
@@ -23,7 +25,7 @@ async function createUser(data, connection) {
 async function findByCompanyAndEmail(companyId, email, connection) {
   const rows = await execute(
     connection,
-    `SELECT id, company_id, email, password_hash, first_name, last_name, role, manager_user_id, is_active
+    `SELECT id, company_id, email, password_hash, google_id, auth_provider, first_name, last_name, role, manager_user_id, is_active
      FROM users
      WHERE company_id = ? AND email = ?`,
     [companyId, email]
@@ -35,7 +37,7 @@ async function findByCompanyAndEmail(companyId, email, connection) {
 async function findById(userId, connection) {
   const rows = await execute(
     connection,
-    `SELECT id, company_id, email, password_hash, first_name, last_name, role, manager_user_id, is_active
+    `SELECT id, company_id, email, password_hash, google_id, auth_provider, first_name, last_name, role, manager_user_id, is_active
      FROM users
      WHERE id = ?`,
     [userId]
@@ -52,10 +54,46 @@ async function findByIdsForCompany(companyId, userIds, connection) {
   const placeholders = userIds.map(() => '?').join(', ');
   return execute(
     connection,
-    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active
+    `SELECT id, company_id, email, google_id, auth_provider, first_name, last_name, role, manager_user_id, is_active
      FROM users
      WHERE company_id = ? AND id IN (${placeholders})`,
     [companyId, ...userIds]
+  );
+}
+
+async function findByGoogleIdForCompany(companyId, googleId, connection) {
+  const rows = await execute(
+    connection,
+    `SELECT id, company_id, email, password_hash, google_id, auth_provider, first_name, last_name, role, manager_user_id, is_active
+     FROM users
+     WHERE company_id = ? AND google_id = ?`,
+    [companyId, googleId]
+  );
+
+  return rows[0] || null;
+}
+
+async function findByGoogleIdGlobal(googleId, connection) {
+  const rows = await execute(
+    connection,
+    `SELECT u.id, u.company_id, u.email, u.password_hash, u.google_id, u.auth_provider, u.first_name, u.last_name,
+            u.role, u.manager_user_id, u.is_active, c.company_code
+     FROM users u
+     INNER JOIN companies c ON c.id = u.company_id
+     WHERE u.google_id = ?`,
+    [googleId]
+  );
+
+  return rows;
+}
+
+async function setGoogleIdentity(userId, googleId, connection) {
+  await execute(
+    connection,
+    `UPDATE users
+     SET google_id = ?, auth_provider = 'google', updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [googleId, userId]
   );
 }
 
@@ -71,7 +109,7 @@ async function findByEmailGlobal(email, connection) {
   const rows = await execute(
     connection,
     `SELECT u.id, u.company_id, u.email, u.password_hash, u.first_name, u.last_name,
-            u.role, u.manager_user_id, u.is_active, c.company_code
+            u.role, u.manager_user_id, u.is_active, u.google_id, u.auth_provider, c.company_code
      FROM users u
      INNER JOIN companies c ON c.id = u.company_id
      WHERE u.email = ?`,
@@ -84,7 +122,7 @@ async function findByEmailGlobal(email, connection) {
 async function listUsers(companyId, connection) {
   return execute(
     connection,
-    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active, created_at
+    `SELECT id, company_id, email, first_name, last_name, role, google_id, auth_provider, manager_user_id, is_active, created_at
      FROM users
      WHERE company_id = ?
      ORDER BY created_at DESC`,
@@ -100,7 +138,7 @@ async function listUsersByIds(companyId, userIds, connection) {
   const placeholders = userIds.map(() => '?').join(', ');
   return execute(
     connection,
-    `SELECT id, company_id, email, first_name, last_name, role, manager_user_id, is_active, created_at
+    `SELECT id, company_id, email, first_name, last_name, role, google_id, auth_provider, manager_user_id, is_active, created_at
      FROM users
      WHERE company_id = ? AND id IN (${placeholders})
      ORDER BY created_at DESC`,
@@ -152,6 +190,9 @@ module.exports = {
   findByCompanyAndEmail,
   findById,
   findByIdsForCompany,
+  findByGoogleIdForCompany,
+  findByGoogleIdGlobal,
+  setGoogleIdentity,
   updateLastLogin,
   findByEmailGlobal,
   listUsers,

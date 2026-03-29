@@ -20,6 +20,89 @@ function roundCurrency(num) {
   return Math.round(Number(num) * 100) / 100;
 }
 
+async function ensureApplicableWorkflow(companyId, category, submittedByUserId, connection) {
+  const existing = await workflowModel.getApplicableWorkflow(companyId, category, connection);
+  if (existing) {
+    const existingSteps = await workflowModel.getWorkflowSteps(existing.id, companyId, connection);
+    const isLegacyDefault = existing.name === 'Default Auto Workflow' && existingSteps.length < 3;
+    if (!isLegacyDefault) {
+      return existing;
+    }
+
+    await workflowModel.setWorkflowActive(existing.id, companyId, false, connection);
+  }
+
+  const users = await userModel.listUsers(companyId, connection);
+  const activeUsers = users.filter((user) => user.is_active);
+
+  if (!activeUsers.length) {
+    throw new HttpError(400, 'No active users found to configure a fallback workflow');
+  }
+
+  const submitter = activeUsers.find((user) => user.id === submittedByUserId) || null;
+  const managerApprover = (submitter && submitter.manager_user_id
+    ? activeUsers.find((user) => user.id === submitter.manager_user_id && user.role === 'manager')
+    : null) || activeUsers.find((user) => user.role === 'manager') || activeUsers.find((user) => user.role === 'director');
+  const financeApprover = activeUsers.find((user) => user.role === 'finance') || activeUsers.find((user) => user.role === 'director');
+  const directorApprover = activeUsers.find((user) => user.role === 'director') || activeUsers.find((user) => user.role === 'finance');
+
+  if (!managerApprover || !financeApprover || !directorApprover) {
+    throw new HttpError(
+      400,
+      'Workflow setup requires at least one manager, finance, and director user in the company'
+    );
+  }
+
+  const workflowId = await workflowModel.createWorkflow(
+    {
+      companyId,
+      name: 'Default Chain Workflow',
+      description: 'Auto-created fallback workflow: manager -> finance -> director',
+      appliesToCategory: 'all',
+      approvalMode: 'SEQUENTIAL',
+      requiredApprovalPercent: null,
+      overrideApproverUserId: null,
+      isActive: true,
+      version: 1,
+      createdByUserId: directorApprover.id
+    },
+    connection
+  );
+
+  const steps = [
+    { stepOrder: 1, name: 'Manager Approval', approverUserId: managerApprover.id },
+    { stepOrder: 2, name: 'Finance Approval', approverUserId: financeApprover.id },
+    { stepOrder: 3, name: 'Director Final Approval', approverUserId: directorApprover.id }
+  ];
+
+  for (const step of steps) {
+    const workflowStepId = await workflowModel.createWorkflowStep(
+      {
+        companyId,
+        workflowId,
+        stepOrder: step.stepOrder,
+        name: step.name,
+        stepType: 'ANY_OF',
+        requiredApprovalPercent: null,
+        isMandatory: true
+      },
+      connection
+    );
+
+    await workflowModel.addStepApprover(
+      {
+        companyId,
+        workflowStepId,
+        approverUserId: step.approverUserId,
+        isRequired: true
+      },
+      connection
+    );
+  }
+
+  return workflowModel.getApplicableWorkflow(companyId, category, connection);
+}
+
 async function createExpense(auth, payload, meta) {
   const title = normalizeString(payload.title);
   const description = normalizeString(payload.description);
@@ -27,6 +110,8 @@ async function createExpense(auth, payload, meta) {
   const expenseDate = normalizeString(payload.expenseDate);
   const originalCurrency = normalizeUppercase(payload.originalCurrency);
   const originalAmount = Number(payload.originalAmount);
+  const receiptDataUrl = normalizeString(payload.receiptDataUrl);
+  const receiptFileName = normalizeString(payload.receiptFileName);
 
   if (!title || !category || !expenseDate || payload.originalAmount === undefined || !originalCurrency) {
     throw new HttpError(400, 'Title, category, date, amount, and currency are required');
@@ -56,13 +141,27 @@ async function createExpense(auth, payload, meta) {
     throw new HttpError(400, 'Currency must be a valid 3-letter currency code');
   }
 
+  if (receiptDataUrl) {
+    if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,/.test(receiptDataUrl)) {
+      throw new HttpError(400, 'Receipt must be a valid image data URL');
+    }
+
+    if (receiptDataUrl.length > 4_000_000) {
+      throw new HttpError(400, 'Receipt image is too large');
+    }
+  }
+
+  if (receiptFileName.length > 255) {
+    throw new HttpError(400, 'Receipt filename is too long');
+  }
+
   return withTransaction(async (connection) => {
     const company = await companyModel.findById(auth.companyId, connection);
     if (!company) {
       throw new HttpError(404, 'Company not found');
     }
 
-    const workflow = await workflowModel.getApplicableWorkflow(auth.companyId, category, connection);
+    const workflow = await ensureApplicableWorkflow(auth.companyId, category, auth.userId, connection);
     if (!workflow) {
       throw new HttpError(400, 'No active workflow configured for this category');
     }
@@ -86,6 +185,8 @@ async function createExpense(auth, payload, meta) {
         title,
         description: description || null,
         category,
+        receiptDataUrl: receiptDataUrl || null,
+        receiptFileName: receiptFileName || null,
         expenseDate,
         originalAmount,
         originalCurrency,

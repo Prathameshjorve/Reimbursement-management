@@ -2,13 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const routes = require('./routes');
+const { configurePassport, passport } = require('./config/passport');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
+configurePassport();
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(morgan('dev'));
+app.use(passport.initialize());
 
 app.get('/', (req, res) => {
   res.send('Reimbursement backend is running');

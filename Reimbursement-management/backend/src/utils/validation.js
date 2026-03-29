@@ -4,7 +4,7 @@ const CURRENCY_CODE_REGEX = /^[A-Z]{3}$/;
 const COUNTRY_CODE_REGEX = /^[A-Z]{2}$/;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-const VALID_ROLES = ['admin', 'manager', 'employee'];
+const VALID_ROLES = ['admin', 'manager', 'employee', 'finance', 'director'];
 const VALID_EXPENSE_CATEGORIES = ['travel', 'food', 'accommodation', 'transport', 'supplies', 'other'];
 const VALID_WORKFLOW_CATEGORIES = ['all', ...VALID_EXPENSE_CATEGORIES];
 const VALID_APPROVAL_MODES = ['SEQUENTIAL', 'PERCENTAGE', 'SPECIFIC_OVERRIDE', 'HYBRID'];

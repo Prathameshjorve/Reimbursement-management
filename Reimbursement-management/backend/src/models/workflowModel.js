@@ -169,6 +169,16 @@ async function getApplicableWorkflow(companyId, category, connection) {
   return rows[0] || null;
 }
 
+async function setWorkflowActive(workflowId, companyId, isActive, connection) {
+  await execute(
+    connection,
+    `UPDATE workflows
+     SET is_active = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND company_id = ?`,
+    [isActive ? 1 : 0, workflowId, companyId]
+  );
+}
+
 module.exports = {
   createWorkflow,
   createWorkflowStep,
@@ -178,6 +188,7 @@ module.exports = {
   getWorkflowSteps,
   getStepApprovers,
   getApplicableWorkflow,
+  setWorkflowActive,
   getWorkflowsByIds,
   getStepsByWorkflowIds,
   getApproversByWorkflowIds

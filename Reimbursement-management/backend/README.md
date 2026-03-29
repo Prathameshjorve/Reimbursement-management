@@ -6,7 +6,8 @@ Production-grade backend for a multi-tenant reimbursement management system.
 - Node.js + Express
 - MySQL 8+
 - JWT auth + bcrypt
-- Role-based access control (admin/manager/employee)
+- Passport.js + Google OAuth 2.0
+- Role-based access control (admin/manager/employee/finance/director)
 
 ## Project Structure
 
@@ -62,6 +63,7 @@ backend/
 
 1. Create MySQL schema:
    - Run `db/schema.sql`
+  - If DB already exists, run `db/migrations/20260329_add_google_oauth_columns.sql`
 2. Configure env:
    - Copy `.env.example` to `.env`
 3. Install dependencies:
@@ -70,6 +72,25 @@ backend/
    - `npm run dev`
 
 API base URL: `http://localhost:5000/api`
+
+## Google OAuth Setup
+
+1. Open Google Cloud Console and create/select a project.
+2. Enable `Google People API` (or basic profile/email scope support).
+3. Go to `APIs & Services > Credentials` and create an `OAuth client ID`.
+4. Choose application type `Web application`.
+5. Add redirect URI:
+  - `http://localhost:5000/api/auth/google/callback`
+6. Copy client ID and client secret into backend `.env`:
+  - `GOOGLE_CLIENT_ID=...`
+  - `GOOGLE_CLIENT_SECRET=...`
+  - `GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback`
+  - `FRONTEND_BASE_URL=http://localhost:5173`
+7. Keep `JWT_SECRET` long and random for production.
+
+OAuth endpoints:
+- `GET /api/auth/google`
+- `GET /api/auth/google/callback`
 
 ## Approval Rule Engine
 
@@ -90,6 +111,8 @@ Main implementation: `src/services/ruleEngineService.js`
 ### Auth
 - `POST /auth/register`
 - `POST /auth/login`
+- `GET /auth/google`
+- `GET /auth/google/callback`
 
 ### Expenses
 - `POST /expenses`

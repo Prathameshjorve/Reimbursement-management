@@ -6,8 +6,7 @@
     <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon">
     <title>Dashboard — AIimburse</title>
     <link rel="stylesheet" href="./style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+    <link rel="stylesheet" href="./tailwind.css">
 </head>
 <body>
     <!-- Sidebar -->
@@ -161,9 +160,9 @@
                         <p class="text-sm" style="color: var(--text-secondary);">Monthly expense breakdown</p>
                     </div>
                     <div class="flex gap-2">
-                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">Monthly</button>
-                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Weekly</button>
-                        <button class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Yearly</button>
+                        <button id="dashboard-range-monthly" onclick="setDashboardRange('monthly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">Monthly</button>
+                        <button id="dashboard-range-weekly" onclick="setDashboardRange('weekly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Weekly</button>
+                        <button id="dashboard-range-yearly" onclick="setDashboardRange('yearly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/5 transition-colors" style="color: var(--text-muted);">Yearly</button>
                     </div>
                 </div>
                 <!-- Chart Bars -->
@@ -223,7 +222,7 @@
             <div class="glass-card-static p-6">
                 <h3 class="text-lg font-bold mb-1" style="color: var(--text-primary);">By Category</h3>
                 <p class="text-sm mb-6" style="color: var(--text-secondary);">Expense distribution</p>
-                <div class="space-y-4">
+                <div class="space-y-4" id="dashboard-category-list">
                     <div>
                         <div class="flex justify-between mb-1.5">
                             <span class="text-sm font-medium" style="color: var(--text-primary);">🍽️ Food & Dining</span>
@@ -281,7 +280,7 @@
                     <h3 class="text-lg font-bold" style="color: var(--text-primary);">Recent Expenses</h3>
                     <a href="employee.html" class="text-sm text-indigo-400 hover:text-indigo-300 transition-colors font-medium">View All →</a>
                 </div>
-                <div class="space-y-3 stagger-children">
+                <div class="space-y-3 stagger-children" id="dashboard-recent-expenses-list">
                     <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer">
                         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center text-lg flex-shrink-0">🍽️</div>
                         <div class="flex-1 min-w-0">
@@ -342,7 +341,7 @@
                 </div>
 
                 <!-- Stepper -->
-                <div class="stepper mb-6">
+                <div class="stepper mb-6" id="dashboard-stepper">
                     <div class="stepper-step">
                         <div class="stepper-circle completed">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -380,7 +379,7 @@
                 </div>
 
                 <!-- Timeline -->
-                <div class="space-y-0">
+                <div class="space-y-0" id="dashboard-flow-timeline">
                     <div class="timeline-item">
                         <div class="timeline-dot completed"></div>
                         <p class="text-sm font-medium" style="color: var(--text-primary);">Submitted by John Doe</p>
